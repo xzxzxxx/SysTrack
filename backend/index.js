@@ -1,11 +1,16 @@
+require('dotenv').config();
+
 const express = require('express');
 const { Pool } = require('pg');
-require('dotenv').config();
+const authRoutes = require('./routes/auth');
+const clientRoutes = require('./routes/clients');
+const contractRoutes = require('./routes/contracts');
+const verifyToken = require('./middleware/auth');
 
 const app = express();
 const port = 3000;
 
-// Middleware to parse JSON requests
+// Middleware
 app.use(express.json());
 
 // Database connection
@@ -23,21 +28,16 @@ pool.connect((err, client, release) => {
   release();
 });
 
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/clients', verifyToken, clientRoutes);
+app.use('/api/contracts', verifyToken, contractRoutes);
+
 // Test route
 app.get('/', (req, res) => {
   res.send('Hello from the backend!');
 });
 
-app.get('/api/clients', async (req, res) => {
-    try {
-      const result = await pool.query('SELECT * FROM Clients');
-      res.json(result.rows);
-    } catch (err) {
-      console.error(err.stack);
-      res.status(500).send('Server error');
-    }
-  });
-  
 // Start server
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
