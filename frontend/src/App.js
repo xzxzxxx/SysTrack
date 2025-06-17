@@ -7,6 +7,7 @@ import ClientList from './components/ClientList';
 import ClientForm from './components/ClientForm';
 import ContractList from './components/ContractList';
 import ContractForm from './components/ContractForm';
+import Dashboard from './components/Dashboard';
 import './App.css';
 
 function App() {
@@ -48,7 +49,7 @@ function App() {
               <ContractList token={token} />
             </Route>
             <Route path="/">
-              <h1>Welcome to SysTrack</h1>
+              <Dashboard token={token} />
             </Route>
           </Switch>
         </div>

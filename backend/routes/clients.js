@@ -7,10 +7,30 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
 
-// Get all clients
+// Get all clients with search and sort
 router.get('/', async (req, res) => {
+  const { search, sortBy, sortOrder } = req.query;
+  let query = 'SELECT * FROM Clients';
+  const values = [];
+  let whereClause = '';
+  let orderClause = '';
+
+  // Search by client_name or dedicated_number
+  if (search) {
+    whereClause = ' WHERE client_name ILIKE $1 OR dedicated_number ILIKE $1';
+    values.push(`%${search}%`);
+  }
+
+  // Sort by no_of_orders or no_of_renew
+  if (sortBy === 'no_of_orders' || sortBy === 'no_of_renew') {
+    const order = sortOrder === 'desc' ? 'DESC' : 'ASC';
+    orderClause = ` ORDER BY ${sortBy} ${order}`;
+  }
+
+  query += whereClause + orderClause;
+
   try {
-    const result = await pool.query('SELECT * FROM Clients');
+    const result = await pool.query(query, values);
     res.json(result.rows);
   } catch (err) {
     console.error(err.stack);

@@ -8,6 +8,8 @@ const pool = new Pool({
 });
 
 // Generate contract code (e.g., CONTRACT-YYYYMMDD-NN)
+// this is wrong
+// categary(2letter)--YY-client_id--dedicated_number--no_of_orders
 const generateContractCode = async (prefix) => {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, ''); // e.g., 20250616
   const result = await pool.query(
@@ -18,10 +20,23 @@ const generateContractCode = async (prefix) => {
   return `${prefix}-${date}-${String(count).padStart(2, '0')}`;
 };
 
-// Get all contracts
+// Get all contracts with search
 router.get('/', async (req, res) => {
+  const { search } = req.query;
+  let query = 'SELECT * FROM Contracts';
+  const values = [];
+  let whereClause = '';
+
+  // Search by client_code or project_name
+  if (search) {
+    whereClause = ' WHERE client_code ILIKE $1 OR project_name ILIKE $1';
+    values.push(`%${search}%`);
+  }
+
+  query += whereClause;
+
   try {
-    const result = await pool.query('SELECT * FROM Contracts');
+    const result = await pool.query(query, values);
     res.json(result.rows);
   } catch (err) {
     console.error(err.stack);
