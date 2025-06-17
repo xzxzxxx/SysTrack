@@ -1,0 +1,79 @@
+.App {
+  text-align: center;
+}
+
+.container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+textarea {
+  padding: 8px;
+  font-size: 16px;
+}
+
+@media (max-width: 600px) {
+  .table-responsive {
+    font-size: 14px;
+  }
+}
+input, select, button {
+  padding: 8px;
+  font-size: 16px;
+}
+
+button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+th {
+  background-color: #f2f2f2;
+}
+
+@media (max-width: 600px) {
+  table, thead, tbody, th, td, tr {
+    display: block;
+  }
+  th, td {
+    text-align: right;
+    padding-left: 50%;
+    position: relative;
+  }
+  th::before, td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 10px;
+    width: 45%;
+    text-align: left;
+    font-weight: bold;
+  }
+}
+
