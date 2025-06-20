@@ -13,21 +13,20 @@ router.get('/', async (req, res) => {
   let query = 'SELECT * FROM Clients';
   const values = [];
   let whereClause = '';
-  let orderClause = '';
 
-  // Search by client_name or dedicated_number
+  // Search by client_name, dedicated_number, or client_id
   if (search) {
-    whereClause = ' WHERE client_name ILIKE $1 OR dedicated_number ILIKE $1';
+    whereClause = ' WHERE client_name ILIKE $1 OR dedicated_number ILIKE $1 OR client_id::text ILIKE $1';
     values.push(`%${search}%`);
   }
 
   // Sort by no_of_orders or no_of_renew
   if (sortBy === 'no_of_orders' || sortBy === 'no_of_renew') {
     const order = sortOrder === 'desc' ? 'DESC' : 'ASC';
-    orderClause = ` ORDER BY ${sortBy} ${order}`;
+    query += whereClause + ` ORDER BY ${sortBy} ${order}`;
+  } else {
+    query += whereClause;
   }
-
-  query += whereClause + orderClause;
 
   try {
     const result = await pool.query(query, values);

@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Login from './components/Login';
 import Register from './components/Register';
-import ClientList from './components/ClientList';
+import ClientList from './components/clients/ClientList';
 import ClientForm from './components/ClientForm';
 import ContractList from './components/ContractList';
 import ContractForm from './components/ContractForm';

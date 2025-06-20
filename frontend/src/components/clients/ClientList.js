@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+import debounce from 'lodash.debounce';
+import SearchBar from '../common/SearchBar';
 
 function ClientList({ token }) {
   const [clients, setClients] = useState([]);
@@ -11,24 +13,31 @@ function ClientList({ token }) {
   const [sortOrder, setSortOrder] = useState('desc');
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
-  useEffect(() => {
-    if (!token) return;
-    const fetchClients = async () => {
+  const fetchClients = useCallback(
+    debounce(async (searchTerm, sortByVal, sortOrderVal) => {
+      if (!token) return;
       setLoading(true);
       try {
         const response = await axios.get('http://localhost:3000/api/clients', {
           headers: { Authorization: `Bearer ${token}` },
-          params: { search, sortBy, sortOrder }
+          params: { search: searchTerm, sortBy: sortByVal, sortOrder: sortOrderVal }
         });
         setClients(response.data);
       } catch (err) {
-        setError(err.response?.data?.error || 'Failed to fetch clients');
+        const errorMsg = err.response?.data?.error || 'Failed to fetch clients';
+        setError(errorMsg);
+        setToast({ show: true, message: errorMsg, type: 'danger' });
+        setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
       } finally {
         setLoading(false);
       }
-    };
-    fetchClients();
-  }, [token, search, sortBy, sortOrder]);
+    }, 300),
+    [token]
+  );
+
+  useEffect(() => {
+    fetchClients(search, sortBy, sortOrder);
+  }, [search, sortBy, sortOrder, fetchClients]);
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this client?')) {
@@ -41,8 +50,9 @@ function ClientList({ token }) {
         setToast({ show: true, message: 'Client deleted successfully', type: 'success' });
         setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
       } catch (err) {
-        setError(err.response?.data?.error || 'Failed to delete client');
-        setToast({ show: true, message: err.response?.data?.error || 'Failed to delete client', type: 'danger' });
+        const errorMsg = err.response?.data?.error || 'Failed to delete client';
+        setError(errorMsg);
+        setToast({ show: true, message: errorMsg, type: 'danger' });
         setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
       } finally {
         setLoading(false);
@@ -50,8 +60,8 @@ function ClientList({ token }) {
     }
   };
 
-  const handleSearch = (e) => {
-    setSearch(e.target.value);
+  const handleSearch = (value) => {
+    setSearch(value);
   };
 
   const handleSortChange = (e) => {
@@ -60,9 +70,6 @@ function ClientList({ token }) {
     setSortOrder(newSortOrder);
   };
 
-  if (loading) return <div className="spinner-border" role="status"><span className="sr-only">Loading...</span></div>;
-  if (error) return <div className="alert alert-danger">{error}</div>;
-
   return (
     <div className="container">
       <h2 className="my-4">Clients</h2>
@@ -70,18 +77,17 @@ function ClientList({ token }) {
         <div className={`alert alert-${toast.type} alert-dismissible fade show`} role="alert">
           {toast.message}
           <button type="button" className="close" onClick={() => setToast({ show: false, message: '', type: '' })}>
-            <span>&times;</span>
+            <span>×</span>
           </button>
         </div>
       )}
       <div className="row mb-3">
         <div className="col-md-6">
-          <input
-            type="text"
-            className="form-control"
-            placeholder="Search by name or dedicated number"
+          <SearchBar
             value={search}
             onChange={handleSearch}
+            placeholder="Search by name, dedicated number, or ID"
+            isSearching={loading}
           />
         </div>
         <div className="col-md-3">
@@ -96,13 +102,15 @@ function ClientList({ token }) {
           <Link to="/clients/new" className="btn btn-primary btn-block">Add New Client</Link>
         </div>
       </div>
-      {clients.length === 0 ? (
+      {error && <div className="alert alert-danger">{error}</div>}
+      {clients.length === 0 && !loading ? (
         <p>No clients found.</p>
       ) : (
         <div className="table-responsive">
           <table className="table table-striped">
             <thead>
               <tr>
+                <th>ID</th>
                 <th>Name</th>
                 <th>Dedicated Number</th>
                 <th>Orders</th>
@@ -113,6 +121,7 @@ function ClientList({ token }) {
             <tbody>
               {clients.map(client => (
                 <tr key={client.client_id}>
+                  <td data-label="ID">{client.client_id}</td>
                   <td data-label="Name">{client.client_name}</td>
                   <td data-label="Dedicated Number">{client.dedicated_number}</td>
                   <td data-label="Orders">{client.no_of_orders}</td>
@@ -133,6 +142,7 @@ function ClientList({ token }) {
           </table>
         </div>
       )}
+      {loading && <div className="spinner-border" role="status"><span className="sr-only">Loading...</span></div>}
     </div>
   );
 }
