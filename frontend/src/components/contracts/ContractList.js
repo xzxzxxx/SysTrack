@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+import debounce from 'lodash.debounce';
+import SearchBar from '../common/SearchBar';
 
 function ContractList({ token }) {
   const [contracts, setContracts] = useState([]);
@@ -10,38 +12,46 @@ function ContractList({ token }) {
   const [selectedContract, setSelectedContract] = useState(null);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
-  useEffect(() => {
-    if (!token) return;
-    const fetchContracts = async () => {
+  const fetchContracts = useCallback(
+    debounce(async (searchTerm) => {
+      if (!token) return;
       setLoading(true);
       try {
         const response = await axios.get('http://localhost:3000/api/contracts', {
           headers: { Authorization: `Bearer ${token}` },
-          params: { search }
+          params: { search: searchTerm }
         });
         setContracts(response.data);
       } catch (err) {
-        setError(err.response?.data?.error || 'Failed to fetch contracts');
+        const errorMsg = err.response?.data?.error || 'Failed to fetch contracts';
+        setError(errorMsg);
+        setToast({ show: true, message: errorMsg, type: 'danger' });
+        setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
       } finally {
         setLoading(false);
       }
-    };
-    fetchContracts();
-  }, [token, search]);
+    }, 300),
+    [token]
+  );
 
-  const handleDelete = async (id) => {
+  useEffect(() => {
+    fetchContracts(search);
+  }, [search, fetchContracts]);
+
+  const handleDelete = async (contract_id) => {
     if (window.confirm('Are you sure you want to delete this contract?')) {
       setLoading(true);
       try {
-        await axios.delete(`http://localhost:3000/api/contracts/${id}`, {
+        await axios.delete(`http://localhost:3000/api/contracts/${contract_id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setContracts(contracts.filter(contract => contract.id !== id));
+        setContracts(contracts.filter(contract => contract.contract_id !== contract_id));
         setToast({ show: true, message: 'Contract deleted successfully', type: 'success' });
         setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
       } catch (err) {
-        setError(err.response?.data?.error || 'Failed to delete contract');
-        setToast({ show: true, message: err.response?.data?.error || 'Failed to delete contract', type: 'danger' });
+        const errorMsg = err.response?.data?.error || 'Failed to delete contract';
+        setError(errorMsg);
+        setToast({ show: true, message: errorMsg, type: 'danger' });
         setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
       } finally {
         setLoading(false);
@@ -49,8 +59,8 @@ function ContractList({ token }) {
     }
   };
 
-  const handleSearch = (e) => {
-    setSearch(e.target.value);
+  const handleSearch = (value) => {
+    setSearch(value);
   };
 
   const showDetails = (contract) => {
@@ -60,9 +70,6 @@ function ContractList({ token }) {
   const hideDetails = () => {
     setSelectedContract(null);
   };
-
-  if (loading) return <div className="spinner-border" role="status"><span className="sr-only">Loading...</span></div>;
-  if (error) return <div className="alert alert-danger">{error}</div>;
 
   return (
     <div className="container">
@@ -77,25 +84,26 @@ function ContractList({ token }) {
       )}
       <div className="row mb-3">
         <div className="col-md-9">
-          <input
-            type="text"
-            className="form-control"
-            placeholder="Search by client code or project name"
+          <SearchBar
             value={search}
             onChange={handleSearch}
+            placeholder="Search by contract ID, client code, or project name"
+            isSearching={loading}
           />
         </div>
         <div className="col-md-3">
           <Link to="/contracts/new" className="btn btn-primary btn-block">Add New Contract</Link>
         </div>
       </div>
-      {contracts.length === 0 ? (
+      {error && !loading && !toast.show && <div className="alert alert-danger">{error}</div>}
+      {contracts.length === 0 && !loading ? (
         <p>No contracts found.</p>
       ) : (
         <div className="table-responsive">
           <table className="table table-striped">
             <thead>
               <tr>
+                <th>Contract ID</th>
                 <th>Client Code</th>
                 <th>Project Name</th>
                 <th>Start Date</th>
@@ -106,21 +114,22 @@ function ContractList({ token }) {
             </thead>
             <tbody>
               {contracts.map(contract => (
-                <tr key={contract.id}>
+                <tr key={contract.contract_id}>
+                  <td data-label="Contract ID">{contract.contract_id}</td>
                   <td data-label="Client Code">{contract.client_code}</td>
                   <td data-label="Project Name">{contract.project_name || '-'}</td>
                   <td data-label="Start Date">{contract.start_date}</td>
                   <td data-label="End Date">{contract.end_date}</td>
                   <td data-label="Status">
-                    <span className={`badge badge-${contract.contract_status === 'Active' ? 'success' : 'secondary'}`}>
+                    <span className={`badge badge-${contract.contract_status === 'active' ? 'success' : 'secondary'}`}>
                       {contract.contract_status || '-'}
                     </span>
                   </td>
                   <td data-label="Actions">
-                    <button className="btn btn-sm btn-info mr-2" onClick={() => showDetails(contract)}>Details</button>
-                    <Link to={`/contracts/${contract.id}/edit`} className="btn btn-sm btn-warning mr-2">Edit</Link>
+                    <button className="btn btn-sm btn-primary mr-2" onClick={() => showDetails(contract)}>Details</button>
+                    <Link to={`/contracts/${contract.contract_id}/edit`} className="btn btn-sm btn-warning mr-2">Edit</Link>
                     <button
-                      onClick={() => handleDelete(contract.id)}
+                      onClick={() => handleDelete(contract.contract_id)}
                       className="btn btn-sm btn-danger"
                       disabled={loading}
                     >
@@ -146,6 +155,7 @@ function ContractList({ token }) {
                 </button>
               </div>
               <div className="modal-body">
+                <p><strong>Contract ID:</strong> {selectedContract.contract_id}</p>
                 <p><strong>Client Code:</strong> {selectedContract.client_code}</p>
                 <p><strong>Renew Code:</strong> {selectedContract.renew_code || '-'}</p>
                 <p><strong>Client:</strong> {selectedContract.client || '-'}</p>

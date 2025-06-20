@@ -8,8 +8,7 @@ const pool = new Pool({
 });
 
 // Generate contract code (e.g., CONTRACT-YYYYMMDD-NN)
-// this is wrong
-// categary(2letter)--YY-client_id--dedicated_number--no_of_orders
+// TODO: Fix format to category(2letter)--YY-client_id--dedicated_number--no_of_orders in future branch
 const generateContractCode = async (prefix) => {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, ''); // e.g., 20250616
   const result = await pool.query(
@@ -27,9 +26,9 @@ router.get('/', async (req, res) => {
   const values = [];
   let whereClause = '';
 
-  // Search by client_code or project_name
+  // Search by contract_id, client_code, or project_name
   if (search) {
-    whereClause = ' WHERE client_code ILIKE $1 OR project_name ILIKE $1';
+    whereClause = ' WHERE contract_id::text ILIKE $1 OR client_code ILIKE $1 OR project_name ILIKE $1';
     values.push(`%${search}%`);
   }
 
@@ -44,11 +43,11 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get a single contract by ID
-router.get('/:id', async (req, res) => {
-  const { id } = req.params;
+// Get a single contract by contract_id
+router.get('/:contract_id', async (req, res) => {
+  const { contract_id } = req.params;
   try {
-    const result = await pool.query('SELECT * FROM Contracts WHERE id = $1', [id]);
+    const result = await pool.query('SELECT * FROM Contracts WHERE contract_id = $1', [contract_id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Contract not found' });
     }
@@ -154,8 +153,8 @@ router.post('/', async (req, res) => {
 });
 
 // Update a contract
-router.put('/:id', async (req, res) => {
-  const { id } = req.params;
+router.put('/:contract_id', async (req, res) => {
+  const { contract_id } = req.params;
   const {
     client_id,
     user_id,
@@ -204,7 +203,7 @@ router.put('/:id', async (req, res) => {
         preventive = $15, report = $16, other = $17, contract_status = $18,
         remarks = $19, period = $20, response_time = $21, service_time = $22,
         spare_parts_provider = $23
-      WHERE id = $24 RETURNING *`,
+      WHERE contract_id = $24 RETURNING *`,
       [
         client_id,
         user_id,
@@ -229,7 +228,7 @@ router.put('/:id', async (req, res) => {
         response_time || null,
         service_time || null,
         spare_parts_provider || null,
-        id
+        contract_id
       ]
     );
     if (result.rows.length === 0) {
@@ -246,10 +245,10 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete a contract
-router.delete('/:id', async (req, res) => {
-  const { id } = req.params;
+router.delete('/:contract_id', async (req, res) => {
+  const { contract_id } = req.params;
   try {
-    const result = await pool.query('DELETE FROM Contracts WHERE id = $1 RETURNING *', [id]);
+    const result = await pool.query('DELETE FROM Contracts WHERE contract_id = $1 RETURNING *', [contract_id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Contract not found' });
     }

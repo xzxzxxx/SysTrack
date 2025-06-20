@@ -34,7 +34,7 @@ function ContractForm({ token }) {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const history = useHistory();
-  const { id } = useParams();
+  const { contract_id } = useParams();
 
   useEffect(() => {
     if (!token) return;
@@ -64,10 +64,10 @@ function ContractForm({ token }) {
 
     // Fetch contract if editing
     const fetchContract = async () => {
-      if (!id) return;
+      if (!contract_id) return;
       setLoading(true);
       try {
-        const response = await axios.get(`http://localhost:3000/api/contracts/${id}`, {
+        const response = await axios.get(`http://localhost:3000/api/contracts/${contract_id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setContract(response.data);
@@ -80,7 +80,7 @@ function ContractForm({ token }) {
 
     fetchClients();
     fetchContract();
-  }, [id, token]);
+  }, [contract_id, token]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -91,8 +91,8 @@ function ContractForm({ token }) {
     e.preventDefault();
     setLoading(true);
     try {
-      if (id) {
-        await axios.put(`http://localhost:3000/api/contracts/${id}`, contract, {
+      if (contract_id) {
+        await axios.put(`http://localhost:3000/api/contracts/${contract_id}`, contract, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setToast({ show: true, message: 'Contract updated successfully', type: 'success' });
@@ -121,7 +121,7 @@ function ContractForm({ token }) {
 
   return (
     <div className="container">
-      <h2 className="my-4">{id ? 'Edit Contract' : 'New Contract'}</h2>
+      <h2 className="my-4">{contract_id ? 'Edit Contract' : 'New Contract'}</h2>
       {toast.show && (
         <div className={`alert alert-${toast.type} alert-dismissible fade show`} role="alert">
           {toast.message}
