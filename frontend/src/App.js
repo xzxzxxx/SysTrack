@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
-import Navbar from './components/Navbar';
-import Login from './components/Login';
-import Register from './components/Register';
+import Navbar from './components/common/Navbar';
+import Login from './components/auth/Login';
+import Register from './components/auth/Register';
 import ClientList from './components/clients/ClientList';
-import ClientForm from './components/ClientForm';
-import ContractList from './components/ContractList';
-import ContractForm from './components/ContractForm';
-import Dashboard from './components/Dashboard';
+import ClientForm from './components/clients/ClientForm';
+import ContractList from './components/contracts/ContractList';
+import ContractForm from './components/contracts/ContractForm';
+import Dashboard from './components/dashboard/Dashboard';
 import './App.css';
 
 function App() {
