@@ -2,17 +2,17 @@ require('dotenv').config();
 const express = require('express');
 const router = express.Router();
 const { Pool } = require('pg');
-
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
 
-// Get all clients with search and sort
+// Get all clients with search, sort, and pagination
 router.get('/', async (req, res) => {
-  const { search, sortBy, sortOrder } = req.query;
-  let query = 'SELECT * FROM Clients';
+  const { search, sortBy, sortOrder, page = 1, limit = 50 } = req.query;
+  const offset = (page - 1) * parseInt(limit);
   const values = [];
   let whereClause = '';
+  let orderByClause = '';
 
   // Search by client_name, dedicated_number, or client_id
   if (search) {
@@ -23,14 +23,31 @@ router.get('/', async (req, res) => {
   // Sort by no_of_orders or no_of_renew
   if (sortBy === 'no_of_orders' || sortBy === 'no_of_renew') {
     const order = sortOrder === 'desc' ? 'DESC' : 'ASC';
-    query += whereClause + ` ORDER BY ${sortBy} ${order}`;
-  } else {
-    query += whereClause;
+    orderByClause = ` ORDER BY ${sortBy} ${order}`;
   }
 
+  const query = `
+    SELECT * FROM Clients
+    ${whereClause}
+    ${orderByClause}
+    LIMIT $${values.length + 1}
+    OFFSET $${values.length + 2}
+  `;
+  const countQuery = `
+    SELECT COUNT(*) FROM Clients
+    ${whereClause}
+  `;
+  values.push(limit, offset);
+
   try {
-    const result = await pool.query(query, values);
-    res.json(result.rows);
+    const [dataResult, countResult] = await Promise.all([
+      pool.query(query, values),
+      pool.query(countQuery, values.slice(0, -2)),
+    ]);
+    res.json({
+      data: dataResult.rows,
+      total: parseInt(countResult.rows[0].count, 10),
+    });
   } catch (err) {
     console.error(err.stack);
     res.status(500).json({ error: 'Server error' });

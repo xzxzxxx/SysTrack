@@ -19,10 +19,12 @@ const generateContractCode = async (prefix) => {
   return `${prefix}-${date}-${String(count).padStart(2, '0')}`;
 };
 
-// Get all contracts with search
+// Get all contracts with search and pagination
 router.get('/', async (req, res) => {
-  const { search } = req.query;
+  const { search, page = 1, limit = 50 } = req.query;
+  const offset = (page - 1) * limit;
   let query = 'SELECT * FROM Contracts';
+  let countQuery = 'SELECT COUNT(*) FROM Contracts';
   const values = [];
   let whereClause = '';
 
@@ -32,11 +34,19 @@ router.get('/', async (req, res) => {
     values.push(`%${search}%`);
   }
 
-  query += whereClause;
+  query += whereClause + ' LIMIT $' + (values.length + 1) + ' OFFSET $' + (values.length + 2);
+  countQuery += whereClause;
+  values.push(limit, offset);
 
   try {
-    const result = await pool.query(query, values);
-    res.json(result.rows);
+    const [dataResult, countResult] = await Promise.all([
+      pool.query(query, values),
+      pool.query(countQuery, values.slice(0, values.length - 2))
+    ]);
+    res.json({
+      data: dataResult.rows,
+      total: parseInt(countResult.rows[0].count)
+    });
   } catch (err) {
     console.error(err.stack);
     res.status(500).json({ error: 'Server error' });
