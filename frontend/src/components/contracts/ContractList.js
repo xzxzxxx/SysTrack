@@ -56,6 +56,7 @@ function ContractList({ token }) {
           headers: { Authorization: `Bearer ${token}` },
           params: { search: searchTerm, page, limit: itemsPerPage }
         });
+        console.log('API Response:', response.data.data); // Debug status values
         setContracts(response.data.data);
         setTotalItems(response.data.total);
       } catch (err) {
@@ -241,9 +242,8 @@ function ContractList({ token }) {
                               contract[col.key] ? new Date(contract[col.key]).toISOString().split('T')[0] : '-'
                             ) : col.key === 'contract_status' ? (
                               <span
-                                className={`badge badge-${
-                                  contract.contract_status === 'New' ? 'success' : 'primary'
-                                }`}
+                                className={`badge bg-${contract.contract_status === 'New' ? 'success' : 'primary'}`}
+                                style={{ fontSize: '1rem', padding: '0.4em 0.8em' }} // Larger size
                               >
                                 {contract.contract_status || '-'}
                               </span>
