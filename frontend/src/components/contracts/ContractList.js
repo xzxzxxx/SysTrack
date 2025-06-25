@@ -18,7 +18,6 @@ function ContractList({ token }) {
   const columns = [
     { key: 'contract_id', label: 'Contract ID' },
     { key: 'client_id', label: 'Client ID' },
-    { key: 'user_id', label: 'User ID' },
     { key: 'client_code', label: 'Client Code' },
     { key: 'renew_code', label: 'Renew Code' },
     { key: 'start_date', label: 'Start Date' },
@@ -42,6 +41,8 @@ function ContractList({ token }) {
     { key: 'preventive', label: 'Preventive', group: 'SLA' },
     { key: 'report', label: 'Report', group: 'SLA' },
     { key: 'other', label: 'Other', group: 'SLA' },
+    { key: 'user_id', label: 'User ID' },
+    { key: 'created_at', label: 'Created At' },
   ];
 
   const { visibleColumns, toggleColumn, resetColumns } = useColumnFilter(columns, 'contract_columns');
@@ -117,7 +118,7 @@ function ContractList({ token }) {
       </div>
       <div className="row">
         {/* Sidebar */}
-        <div className="col-md-3 col-12 mb-3">
+        <div className="col-md-2 col-12 mb-3">
           <Link to="/contracts/new" className="btn btn-primary w-100 mb-2">
             Add New Contract
           </Link>
@@ -187,7 +188,7 @@ function ContractList({ token }) {
           </div>
         </div>
         {/* Main Content */}
-        <div className="col-md-9 col-12">
+        <div className="col-md-10 col-12">
           {toast.show && (
             <div className={`alert alert-${toast.type} alert-dismissible fade show`} role="alert">
               {toast.message}
@@ -210,7 +211,13 @@ function ContractList({ token }) {
                   <tr>
                     {columns.map(col => (
                       visibleColumns[col.key] && (
-                        <th key={col.key} scope="col">
+                        <th
+                          key={col.key}
+                          scope="col"
+                          style={{
+                            minWidth: col.key === 'project_name' ? '250px' : col.key === 'remarks' ? '200px' : 'auto',
+                          }}
+                        >
                           {col.label}
                         </th>
                       )
@@ -223,11 +230,19 @@ function ContractList({ token }) {
                     <tr key={contract.contract_id}>
                       {columns.map(col => (
                         visibleColumns[col.key] && (
-                          <td key={col.key} data-label={col.label}>
-                            {col.key === 'contract_status' ? (
+                          <td
+                            key={col.key}
+                            data-label={col.label}
+                            style={{
+                              minWidth: col.key === 'project_name' ? '250px' : col.key === 'remarks' ? '200px' : 'auto',
+                            }}
+                          >
+                            {['start_date', 'end_date', 'created_at'].includes(col.key) ? (
+                              contract[col.key] ? new Date(contract[col.key]).toISOString().split('T')[0] : '-'
+                            ) : col.key === 'contract_status' ? (
                               <span
                                 className={`badge badge-${
-                                  contract.contract_status === 'active' ? 'success' : 'secondary'
+                                  contract.contract_status === 'New' ? 'success' : 'primary'
                                 }`}
                               >
                                 {contract.contract_status || '-'}
