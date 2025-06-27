@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import './Navbar.css';
 
-function Navbar({ token, logout, children }) {
-  const [isOpen, setIsOpen] = useState(true);
+function Navbar({ token, logout, isOpen, setIsOpen }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   return (
@@ -77,9 +76,6 @@ function Navbar({ token, logout, children }) {
           </button>
         </div>
       </nav>
-      <main className={`main-content ${isOpen ? 'open' : 'closed'}`}>
-        {children}
-      </main>
     </>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
-import Navbar from './components/common/navbar/Navbar';
+import Layout from './components/common/DefaultLayout';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import ClientList from './components/clients/ClientList';
@@ -21,39 +21,53 @@ function App() {
   return (
     <Router>
       <div className="App">
-        <Navbar token={token} logout={logout}>
-          <div className="container">
-            <Switch>
-              <Route path="/login">
-                <Login setToken={setToken} />
-              </Route>
-              <Route path="/register">
-                <Register />
-              </Route>
-              <Route path="/clients/new">
-                <ClientForm token={token} />
-              </Route>
-              <Route path="/clients/:id/edit">
-                <ClientForm token={token} />
-              </Route>
-              <Route path="/clients">
-                <ClientList token={token} />
-              </Route>
-              <Route path="/contracts/new">
-                <ContractForm token={token} />
-              </Route>
-              <Route path="/contracts/:id/edit">
-                <ContractForm token={token} />
-              </Route>
-              <Route path="/contracts">
-                <ContractList token={token} />
-              </Route>
-              <Route path="/">
-                <Dashboard token={token} />
-              </Route>
-            </Switch>
-          </div>
-        </Navbar>
+        <Switch>
+          <Route path="/login">
+            <Layout token={token} logout={logout} layoutType="full">
+              <Login setToken={setToken} />
+            </Layout>
+          </Route>
+          <Route path="/register">
+            <Layout token={token} logout={logout} layoutType="full">
+              <Register />
+            </Layout>
+          </Route>
+          <Route path="/clients/new">
+            <Layout token={token} logout={logout}>
+              <ClientForm token={token} />
+            </Layout>
+          </Route>
+          <Route path="/clients/:id/edit">
+            <Layout token={token} logout={logout}>
+              <ClientForm token={token} />
+            </Layout>
+          </Route>
+          <Route path="/clients">
+            <Layout token={token} logout={logout}>
+              <ClientList token={token} />
+            </Layout>
+          </Route>
+          <Route path="/contracts/new">
+            <Layout token={token} logout={logout}>
+              <ContractForm token={token} />
+            </Layout>
+          </Route>
+          <Route path="/contracts/:id/edit">
+            <Layout token={token} logout={logout}>
+              <ContractForm token={token} />
+            </Layout>
+          </Route>
+          <Route path="/contracts">
+            <Layout token={token} logout={logout}>
+              <ContractList token={token} />
+            </Layout>
+          </Route>
+          <Route path="/">
+            <Layout token={token} logout={logout}>
+              <Dashboard token={token} />
+            </Layout>
+          </Route>
+        </Switch>
       </div>
     </Router>
   );
