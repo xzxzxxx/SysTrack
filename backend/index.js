@@ -3,11 +3,12 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
+const verifyToken = require('./middleware/auth');
 const authRoutes = require('./routes/auth');
 const clientRoutes = require('./routes/clients');
 const contractRoutes = require('./routes/contracts');
 const userRoutes = require('./routes/users');
-const verifyToken = require('./middleware/auth');
+const projectRoutes = require('./routes/projects');
 
 const app = express();
 const port = 3000;
@@ -31,15 +32,11 @@ pool.connect((err, client, release) => {
 });
 
 // Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authRoutes); // No middleware (public route for login/register)
 app.use('/api/clients', verifyToken, clientRoutes);
 app.use('/api/contracts', verifyToken, contractRoutes);
 app.use('/api/users', verifyToken, userRoutes);
-
-// Test route
-app.get('/', (req, res) => {
-  res.send('Hello from the backend!');
-});
+app.use('/api/projects', verifyToken, projectRoutes);
 
 // Start server
 app.listen(port, () => {
