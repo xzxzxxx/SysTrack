@@ -1,4 +1,3 @@
-require('dotenv').config();
 const express = require('express');
 const router = express.Router();
 const { Pool } = require('pg');
@@ -23,14 +22,17 @@ const generateContractCode = async (prefix) => {
 router.get('/', async (req, res) => {
   const { search, page = 1, limit = 50 } = req.query;
   const offset = (page - 1) * limit;
-  let query = 'SELECT * FROM Contracts';
-  let countQuery = 'SELECT COUNT(*) FROM Contracts';
+  let query = `
+    SELECT c.*, p.project_name 
+    FROM Contracts c 
+    LEFT JOIN projects p ON c.project_id = p.project_id`;
+  let countQuery = 'SELECT COUNT(*) FROM Contracts c';
   const values = [];
   let whereClause = '';
 
-  // Search by contract_id, client_code, or project_name
+  // Search by contract_id, client_code, or contract_name
   if (search) {
-    whereClause = ' WHERE contract_id::text ILIKE $1 OR client_code ILIKE $1 OR project_name ILIKE $1';
+    whereClause = ' WHERE c.contract_id::text ILIKE $1 OR c.client_code ILIKE $1 OR c.contract_name ILIKE $1';
     values.push(`%${search}%`);
   }
 
@@ -57,7 +59,10 @@ router.get('/', async (req, res) => {
 router.get('/:contract_id', async (req, res) => {
   const { contract_id } = req.params;
   try {
-    const result = await pool.query('SELECT * FROM Contracts WHERE contract_id = $1', [contract_id]);
+    const result = await pool.query(
+      'SELECT c.*, p.project_name FROM Contracts c LEFT JOIN projects p ON c.project_id = p.project_id WHERE c.contract_id = $1',
+      [contract_id]
+    );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Contract not found' });
     }
@@ -79,7 +84,7 @@ router.post('/', async (req, res) => {
     alias,
     jobnote,
     sales,
-    project_name,
+    contract_name,
     location,
     category,
     t1,
@@ -93,7 +98,8 @@ router.post('/', async (req, res) => {
     period,
     response_time,
     service_time,
-    spare_parts_provider
+    spare_parts_provider,
+    project_id // New field
   } = req.body;
 
   if (!client_id || !user_id || !start_date || !end_date) {
@@ -110,16 +116,24 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Invalid user_id' });
     }
 
+    // Check if project_id is valid if provided
+    if (project_id) {
+      const projectCheck = await pool.query('SELECT 1 FROM projects WHERE id = $1', [project_id]);
+      if (projectCheck.rows.length === 0) {
+        return res.status(400).json({ error: 'Invalid project_id' });
+      }
+    }
+
     const client_code = await generateContractCode('CONTRACT');
     const renew_code = await generateContractCode('RENEW');
 
     const result = await pool.query(
       `INSERT INTO Contracts (
         client_id, user_id, start_date, end_date, client_code, renew_code,
-        client, alias, jobnote, sales, project_name, location, category,
+        client, alias, jobnote, sales, contract_name, location, category,
         t1, t2, t3, preventive, report, other, contract_status, remarks,
-        period, response_time, service_time, spare_parts_provider
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
+        period, response_time, service_time, spare_parts_provider, project_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
       RETURNING *`,
       [
         client_id,
@@ -132,7 +146,7 @@ router.post('/', async (req, res) => {
         alias || null,
         jobnote || null,
         sales || null,
-        project_name || null,
+        contract_name || null,
         location || null,
         category || null,
         t1 || null,
@@ -146,7 +160,8 @@ router.post('/', async (req, res) => {
         period || null,
         response_time || null,
         service_time || null,
-        spare_parts_provider || null
+        spare_parts_provider || null,
+        project_id || null
       ]
     );
     res.status(201).json(result.rows[0]);
@@ -174,7 +189,7 @@ router.put('/:contract_id', async (req, res) => {
     alias,
     jobnote,
     sales,
-    project_name,
+    contract_name, // Renamed from project_name
     location,
     category,
     t1,
@@ -188,7 +203,8 @@ router.put('/:contract_id', async (req, res) => {
     period,
     response_time,
     service_time,
-    spare_parts_provider
+    spare_parts_provider,
+    project_id // New field
   } = req.body;
 
   if (!client_id || !user_id || !start_date || !end_date) {
@@ -205,15 +221,23 @@ router.put('/:contract_id', async (req, res) => {
       return res.status(400).json({ error: 'Invalid user_id' });
     }
 
+    // Check if project_id is valid if provided
+    if (project_id) {
+      const projectCheck = await pool.query('SELECT 1 FROM projects WHERE id = $1', [project_id]);
+      if (projectCheck.rows.length === 0) {
+        return res.status(400).json({ error: 'Invalid project_id' });
+      }
+    }
+
     const result = await pool.query(
       `UPDATE Contracts SET
         client_id = $1, user_id = $2, start_date = $3, end_date = $4,
-        client = $5, alias = $6, jobnote = $7, sales = $8, project_name = $9,
+        client = $5, alias = $6, jobnote = $7, sales = $8, contract_name = $9,
         location = $10, category = $11, t1 = $12, t2 = $13, t3 = $14,
         preventive = $15, report = $16, other = $17, contract_status = $18,
         remarks = $19, period = $20, response_time = $21, service_time = $22,
-        spare_parts_provider = $23
-      WHERE contract_id = $24 RETURNING *`,
+        spare_parts_provider = $23, project_id = $24
+      WHERE contract_id = $25 RETURNING *`,
       [
         client_id,
         user_id,
@@ -223,7 +247,7 @@ router.put('/:contract_id', async (req, res) => {
         alias || null,
         jobnote || null,
         sales || null,
-        project_name || null,
+        contract_name || null,
         location || null,
         category || null,
         t1 || null,
@@ -238,6 +262,7 @@ router.put('/:contract_id', async (req, res) => {
         response_time || null,
         service_time || null,
         spare_parts_provider || null,
+        project_id || null,
         contract_id
       ]
     );

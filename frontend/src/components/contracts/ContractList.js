@@ -26,7 +26,7 @@ function ContractList({ token }) {
     { key: 'alias', label: 'Alias' },
     { key: 'jobnote', label: 'Job Note' },
     { key: 'sales', label: 'Sales' },
-    { key: 'project_name', label: 'Project Name' },
+    { key: 'contract_name', label: 'Contract Name' }, // Renamed from project_name
     { key: 'location', label: 'Location' },
     { key: 'category', label: 'Category' },
     { key: 'contract_status', label: 'Status' },
@@ -43,6 +43,7 @@ function ContractList({ token }) {
     { key: 'other', label: 'Other', group: 'SLA' },
     { key: 'user_id', label: 'User ID' },
     { key: 'created_at', label: 'Created At' },
+    { key: 'project_name', label: 'Project Name' }, // Added to display joined data
   ];
 
   const { visibleColumns, toggleColumn, resetColumns } = useColumnFilter(columns, 'contract_columns');
@@ -118,7 +119,6 @@ function ContractList({ token }) {
         </div>
       </div>
       <div className="row">
-        {/* Sidebar */}
         <div className="col-md-2 col-12 mb-3">
           <Link to="/contracts/new" className="btn btn-primary w-100 mb-2">
             Add New Contract
@@ -126,7 +126,7 @@ function ContractList({ token }) {
           <SearchBar
             value={search}
             onChange={handleSearch}
-            placeholder="Search by contract ID, client code, or project name"
+            placeholder="Search by contract ID, client code, or contract name" // Updated placeholder
             isSearching={loading}
             className="w-100 mb-2"
           />
@@ -188,7 +188,6 @@ function ContractList({ token }) {
             </button>
           </div>
         </div>
-        {/* Main Content */}
         <div className="col-md-10 col-12">
           {toast.show && (
             <div className={`alert alert-${toast.type} alert-dismissible fade show`} role="alert">
@@ -216,7 +215,7 @@ function ContractList({ token }) {
                           key={col.key}
                           scope="col"
                           style={{
-                            minWidth: col.key === 'project_name' ? '250px' : col.key === 'remarks' ? '200px' : 'auto',
+                            minWidth: col.key === 'contract_name' ? '250px' : col.key === 'remarks' ? '200px' : 'auto', // Updated minWidth
                           }}
                         >
                           {col.label}
@@ -235,7 +234,7 @@ function ContractList({ token }) {
                             key={col.key}
                             data-label={col.label}
                             style={{
-                              minWidth: col.key === 'project_name' ? '250px' : col.key === 'remarks' ? '200px' : 'auto',
+                              minWidth: col.key === 'contract_name' ? '250px' : col.key === 'remarks' ? '200px' : 'auto',
                             }}
                           >
                             {['start_date', 'end_date', 'created_at'].includes(col.key) ? (
@@ -243,10 +242,12 @@ function ContractList({ token }) {
                             ) : col.key === 'contract_status' ? (
                               <span
                                 className={`badge bg-${contract.contract_status === 'New' ? 'success' : 'primary'}`}
-                                style={{ fontSize: '1rem', padding: '0.4em 0.8em' }} // Larger size
+                                style={{ fontSize: '1rem', padding: '0.4em 0.8em' }}
                               >
                                 {contract.contract_status || '-'}
                               </span>
+                            ) : col.key === 'project_name' ? (
+                              contract.project_name || '-' // Display project_name or '-' if null
                             ) : (
                               contract[col.key] || '-'
                             )}

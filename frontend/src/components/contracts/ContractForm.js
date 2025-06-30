@@ -13,7 +13,7 @@ function ContractForm({ token }) {
     alias: '',
     jobnote: '',
     sales: '',
-    project_name: '',
+    contract_name: '', // Renamed from project_name
     location: '',
     category: '',
     t1: '',
@@ -27,9 +27,11 @@ function ContractForm({ token }) {
     period: '',
     response_time: '',
     service_time: '',
-    spare_parts_provider: ''
+    spare_parts_provider: '',
+    project_id: null // New field, default null
   });
   const [clients, setClients] = useState([]);
+  const [projects, setProjects] = useState([]); // New state for projects
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
@@ -61,7 +63,22 @@ function ContractForm({ token }) {
         setLoading(false);
       }
     };
-
+  
+    // Fetch projects
+    const fetchProjects = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.get('http://localhost:3000/api/projects', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setProjects(response.data); // Assuming response.data is [{ id, project_name }, ...]
+      } catch (err) {
+        console.error('Failed to fetch projects:', err); // Log but don't set error
+      } finally {
+        setLoading(false);
+      }
+    };
+  
     // Fetch contract if editing
     const fetchContract = async () => {
       if (!contract_id) return;
@@ -77,14 +94,20 @@ function ContractForm({ token }) {
         setLoading(false);
       }
     };
-
+  
     fetchClients();
+    fetchProjects();
     fetchContract();
   }, [contract_id, token]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setContract(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleProjectChange = (e) => {
+    const value = e.target.value === '' ? null : parseInt(e.target.value);
+    setContract(prev => ({ ...prev, project_id: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -204,15 +227,29 @@ function ContractForm({ token }) {
               />
             </div>
             <div className="form-group">
-              <label>Project Name</label>
+              <label>Contract Name</label> {/* Renamed from Project Name */}
               <input
                 type="text"
-                name="project_name"
+                name="contract_name"
                 className="form-control"
-                placeholder="Project Name"
-                value={contract.project_name}
+                placeholder="Contract Name"
+                value={contract.contract_name}
                 onChange={handleChange}
               />
+            </div>
+            <div className="form-group">
+              <label>Project</label>
+              <select
+                name="project_id"
+                className="form-control"
+                value={contract.project_id || ''} // Empty string for null
+                onChange={handleProjectChange}
+              >
+                <option value="">No Group</option>
+                {projects.map(project => (
+                  <option key={project.id} value={project.id}>{project.project_name}</option>
+                ))}
+              </select>
             </div>
             <div className="form-group">
               <label>Location</label>
