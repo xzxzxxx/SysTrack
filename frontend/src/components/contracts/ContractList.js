@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useHistory } from 'react-router-dom';
 import debounce from 'lodash.debounce';
 import SearchBar from '../common/SearchBar';
 import useColumnFilter from '../../utils/useColumnFilter';
@@ -13,7 +13,13 @@ function ContractList({ token }) {
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [showNoContractsPopup, setShowNoContractsPopup] = useState(false);
   const itemsPerPage = 50;
+
+  const location = useLocation();
+  const history = useHistory();
+  const searchParams = new URLSearchParams(location.search);
+  const projectId = searchParams.get('project_id');
 
   const columns = [
     { key: 'contract_id', label: 'Contract ID' },
@@ -26,7 +32,7 @@ function ContractList({ token }) {
     { key: 'alias', label: 'Alias' },
     { key: 'jobnote', label: 'Job Note' },
     { key: 'sales', label: 'Sales' },
-    { key: 'contract_name', label: 'Contract Name' }, // Renamed from project_name
+    { key: 'contract_name', label: 'Contract Name' },
     { key: 'location', label: 'Location' },
     { key: 'category', label: 'Category' },
     { key: 'contract_status', label: 'Status' },
@@ -43,7 +49,7 @@ function ContractList({ token }) {
     { key: 'other', label: 'Other', group: 'SLA' },
     { key: 'user_id', label: 'User ID' },
     { key: 'created_at', label: 'Created At' },
-    { key: 'project_name', label: 'Project Name' }, // Added to display joined data
+    { key: 'project_name', label: 'Project Name' },
   ];
 
   const { visibleColumns, toggleColumn, resetColumns } = useColumnFilter(columns, 'contract_columns');
@@ -53,13 +59,21 @@ function ContractList({ token }) {
       if (!token) return;
       setLoading(true);
       try {
+        const params = { search: searchTerm, page, limit: itemsPerPage };
+        if (projectId) {
+          params.project_id = projectId;
+        }
         const response = await axios.get('http://localhost:3000/api/contracts', {
           headers: { Authorization: `Bearer ${token}` },
-          params: { search: searchTerm, page, limit: itemsPerPage }
+          params
         });
-        console.log('API Response:', response.data.data); // Debug status values
-        setContracts(response.data.data);
-        setTotalItems(response.data.total);
+        const data = response.data.data;
+        if (projectId && data.length === 0) {
+          setShowNoContractsPopup(true);
+        } else {
+          setContracts(data);
+          setTotalItems(response.data.total);
+        }
       } catch (err) {
         const errorMsg = err.response?.data?.error || 'Failed to fetch contracts';
         setError(errorMsg);
@@ -69,7 +83,7 @@ function ContractList({ token }) {
         setLoading(false);
       }
     }, 300),
-    [token]
+    [token, projectId]
   );
 
   useEffect(() => {
@@ -107,6 +121,11 @@ function ContractList({ token }) {
     setCurrentPage(page);
   };
 
+  const handleReturnToContracts = () => {
+    setShowNoContractsPopup(false);
+    history.push('/contracts');
+  };
+
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startItem = (currentPage - 1) * itemsPerPage + 1;
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
@@ -126,7 +145,7 @@ function ContractList({ token }) {
           <SearchBar
             value={search}
             onChange={handleSearch}
-            placeholder="Search by contract ID, client code, or contract name" // Updated placeholder
+            placeholder="Search by contract ID, client code, or contract name"
             isSearching={loading}
             className="w-100 mb-2"
           />
@@ -202,9 +221,8 @@ function ContractList({ token }) {
             </div>
           )}
           {error && !loading && !toast.show && <div className="alert alert-danger">{error}</div>}
-          {contracts.length === 0 && !loading ? (
-            <p>No contracts found.</p>
-          ) : (
+          {contracts.length === 0 && !loading && !showNoContractsPopup && <p>No contracts found.</p>}
+          {contracts.length > 0 && (
             <div className="table-responsive">
               <table className="table table-striped">
                 <thead>
@@ -215,7 +233,7 @@ function ContractList({ token }) {
                           key={col.key}
                           scope="col"
                           style={{
-                            minWidth: col.key === 'contract_name' ? '250px' : col.key === 'remarks' ? '200px' : 'auto', // Updated minWidth
+                            minWidth: col.key === 'contract_name' ? '250px' : col.key === 'remarks' ? '200px' : 'auto',
                           }}
                         >
                           {col.label}
@@ -247,7 +265,7 @@ function ContractList({ token }) {
                                 {contract.contract_status || '-'}
                               </span>
                             ) : col.key === 'project_name' ? (
-                              contract.project_name || '-' // Display project_name or '-' if null
+                              contract.project_name || '-'
                             ) : (
                               contract[col.key] || '-'
                             )}
@@ -278,6 +296,28 @@ function ContractList({ token }) {
           {loading && (
             <div className="spinner-border" role="status">
               <span className="sr-only">Loading...</span>
+            </div>
+          )}
+          {showNoContractsPopup && (
+            <div className="modal" tabIndex="-1" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+              <div className="modal-dialog">
+                <div className="modal-content">
+                  <div className="modal-header">
+                    <h5 className="modal-title">No Contracts Found</h5>
+                    <button type="button" className="close" onClick={() => setShowNoContractsPopup(false)}>
+                      <span>&times;</span>
+                    </button>
+                  </div>
+                  <div className="modal-body">
+                    <p>No contracts are associated with this project.</p>
+                  </div>
+                  <div className="modal-footer">
+                    <button type="button" className="btn btn-primary" onClick={handleReturnToContracts}>
+                      Return to Contracts
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
           <div className="d-flex justify-content-between align-items-center mt-3">

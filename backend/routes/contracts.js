@@ -20,7 +20,7 @@ const generateContractCode = async (prefix) => {
 
 // Get all contracts with search and pagination
 router.get('/', async (req, res) => {
-  const { search, page = 1, limit = 50 } = req.query;
+  const { search, page = 1, limit = 50, project_id } = req.query;
   const offset = (page - 1) * limit;
   let query = `
     SELECT c.*, p.project_name 
@@ -30,10 +30,19 @@ router.get('/', async (req, res) => {
   const values = [];
   let whereClause = '';
 
-  // Search by contract_id, client_code, or contract_name
+  // Apply filters
+  const conditions = [];
   if (search) {
-    whereClause = ' WHERE c.contract_id::text ILIKE $1 OR c.client_code ILIKE $1 OR c.contract_name ILIKE $1';
+    conditions.push('c.contract_id::text ILIKE $1 OR c.client_code ILIKE $1 OR c.contract_name ILIKE $1');
     values.push(`%${search}%`);
+  }
+  if (project_id) {
+    conditions.push('c.project_id = $' + (values.length + 1));
+    values.push(project_id);
+  }
+
+  if (conditions.length > 0) {
+    whereClause = ' WHERE ' + conditions.join(' AND ');
   }
 
   query += whereClause + ' LIMIT $' + (values.length + 1) + ' OFFSET $' + (values.length + 2);
@@ -189,7 +198,7 @@ router.put('/:contract_id', async (req, res) => {
     alias,
     jobnote,
     sales,
-    contract_name, // Renamed from project_name
+    contract_name,
     location,
     category,
     t1,
@@ -204,7 +213,7 @@ router.put('/:contract_id', async (req, res) => {
     response_time,
     service_time,
     spare_parts_provider,
-    project_id // New field
+    project_id
   } = req.body;
 
   if (!client_id || !user_id || !start_date || !end_date) {
@@ -221,7 +230,6 @@ router.put('/:contract_id', async (req, res) => {
       return res.status(400).json({ error: 'Invalid user_id' });
     }
 
-    // Check if project_id is valid if provided
     if (project_id) {
       const projectCheck = await pool.query('SELECT 1 FROM projects WHERE id = $1', [project_id]);
       if (projectCheck.rows.length === 0) {
