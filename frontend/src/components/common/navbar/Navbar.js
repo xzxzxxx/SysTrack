@@ -35,6 +35,9 @@ function Navbar({ token, logout, isOpen, setIsOpen }) {
               <li className="nav-item">
                 <Link className="nav-link" to="/contracts">Contracts</Link>
               </li>
+              <li className="nav-item">
+                <Link className="nav-link" to="/projects">Projects</Link>
+              </li>
             </>
           ) : (
             <>

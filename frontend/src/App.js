@@ -8,7 +8,7 @@ import ClientForm from './components/clients/ClientForm';
 import ContractList from './components/contracts/ContractList';
 import ContractForm from './components/contracts/ContractForm';
 import Dashboard from './components/dashboard/Dashboard';
-import './App.css';
+import Projects from './components/projects/Projects';
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '');
@@ -60,6 +60,11 @@ function App() {
           <Route path="/contracts">
             <Layout token={token} logout={logout}>
               <ContractList token={token} />
+            </Layout>
+          </Route>
+          <Route path="/projects">
+            <Layout token={token} logout={logout}>
+              <Projects token={token} />
             </Layout>
           </Route>
           <Route path="/">

@@ -63,7 +63,7 @@ function ContractForm({ token }) {
         setLoading(false);
       }
     };
-  
+
     // Fetch projects
     const fetchProjects = async () => {
       setLoading(true);
@@ -71,14 +71,14 @@ function ContractForm({ token }) {
         const response = await axios.get('http://localhost:3000/api/projects', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setProjects(response.data); // Assuming response.data is [{ id, project_name }, ...]
+        setProjects(response.data); // Updated to handle [{ project_id, project_name }, ...]
       } catch (err) {
-        console.error('Failed to fetch projects:', err); // Log but don't set error
+        console.error('Failed to fetch projects: Please ensure /api/projects endpoint is implemented', err);
       } finally {
         setLoading(false);
       }
     };
-  
+
     // Fetch contract if editing
     const fetchContract = async () => {
       if (!contract_id) return;
@@ -94,7 +94,7 @@ function ContractForm({ token }) {
         setLoading(false);
       }
     };
-  
+
     fetchClients();
     fetchProjects();
     fetchContract();
@@ -247,7 +247,7 @@ function ContractForm({ token }) {
               >
                 <option value="">No Group</option>
                 {projects.map(project => (
-                  <option key={project.id} value={project.id}>{project.project_name}</option>
+                  <option key={project.project_id} value={project.project_id}>{project.project_name}</option>
                 ))}
               </select>
             </div>
