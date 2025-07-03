@@ -3,8 +3,10 @@ import axios from 'axios';
 import { Link, useLocation, useHistory } from 'react-router-dom';
 import debounce from 'lodash.debounce';
 import SearchBar from '../common/SearchBar';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import useColumnFilter from '../../utils/useColumnFilter';
 
+// Component to display and manage a list of contracts
 function ContractList({ token }) {
   const [contracts, setContracts] = useState([]);
   const [error, setError] = useState('');
@@ -21,6 +23,8 @@ function ContractList({ token }) {
   const searchParams = new URLSearchParams(location.search);
   const projectId = searchParams.get('project_id');
 
+  // Define all columns with groups for organized filtering
+  // Groups (PIC and SLA) help categorize related columns for user convenience
   const columns = [
     { key: 'contract_id', label: 'Contract ID' },
     { key: 'client_id', label: 'Client ID' },
@@ -52,7 +56,7 @@ function ContractList({ token }) {
     { key: 'project_name', label: 'Project Name' },
   ];
 
-  const { visibleColumns, toggleColumn, resetColumns } = useColumnFilter(columns, 'contract_columns');
+  const { visibleColumns, toggleColumn, resetColumns, order, reorderColumns } = useColumnFilter(columns, 'contract_columns');
 
   const fetchContracts = useCallback(
     debounce(async (searchTerm, page) => {
@@ -126,6 +130,13 @@ function ContractList({ token }) {
     history.push('/contracts');
   };
 
+  // Handle drag-and-drop reordering of column headers
+  // This function updates the order array when a column is dragged and dropped
+  const onDragEnd = (result) => {
+    if (!result.destination) return; // Exit if dropped outside droppable area
+    reorderColumns(result.source.index, result.destination.index);
+  };
+
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startItem = (currentPage - 1) * itemsPerPage + 1;
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
@@ -152,6 +163,8 @@ function ContractList({ token }) {
           <hr />
           <h5>Select Columns</h5>
           <div className="filter-container" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+            {/* Render checkboxes for columns without a group */}
+            {/* These are general columns not categorized under PIC or SLA */}
             {columns
               .filter(col => !col.group)
               .map(col => (
@@ -160,7 +173,7 @@ function ContractList({ token }) {
                     type="checkbox"
                     className="form-check-input"
                     id={col.key}
-                    checked={visibleColumns[col.key]}
+                    checked={visibleColumns[col.key] || false} // Default to false if undefined
                     onChange={() => toggleColumn(col.key)}
                   />
                   <label className="form-check-label" htmlFor={col.key}>
@@ -168,6 +181,9 @@ function ContractList({ token }) {
                   </label>
                 </div>
               ))}
+
+            {/* Render checkboxes for PIC group columns */}
+            {/* PIC stands for Personnel In Charge, grouping related team columns */}
             <strong className="d-block mt-2">PIC</strong>
             {columns
               .filter(col => col.group === 'PIC')
@@ -177,7 +193,7 @@ function ContractList({ token }) {
                     type="checkbox"
                     className="form-check-input"
                     id={col.key}
-                    checked={visibleColumns[col.key]}
+                    checked={visibleColumns[col.key] || false}
                     onChange={() => toggleColumn(col.key)}
                   />
                   <label className="form-check-label" htmlFor={col.key}>
@@ -185,6 +201,9 @@ function ContractList({ token }) {
                   </label>
                 </div>
               ))}
+
+            {/* Render checkboxes for SLA group columns */}
+            {/* SLA stands for Service Level Agreement, grouping service-related columns */}
             <strong className="d-block mt-2">SLA</strong>
             {columns
               .filter(col => col.group === 'SLA')
@@ -194,7 +213,7 @@ function ContractList({ token }) {
                     type="checkbox"
                     className="form-check-input"
                     id={col.key}
-                    checked={visibleColumns[col.key]}
+                    checked={visibleColumns[col.key] || false}
                     onChange={() => toggleColumn(col.key)}
                   />
                   <label className="form-check-label" htmlFor={col.key}>
@@ -202,6 +221,7 @@ function ContractList({ token }) {
                   </label>
                 </div>
               ))}
+
             <button className="btn btn-secondary w-100 mt-2" onClick={resetColumns}>
               Reset to All
             </button>
@@ -225,49 +245,71 @@ function ContractList({ token }) {
           {contracts.length > 0 && (
             <div className="table-responsive">
               <table className="table table-striped">
-                <thead>
-                  <tr>
-                    {columns.map(col => (
-                      visibleColumns[col.key] && (
-                        <th
-                          key={col.key}
-                          scope="col"
-                          style={{
-                            minWidth: col.key === 'contract_name' ? '250px' : col.key === 'remarks' ? '200px' : 'auto',
-                          }}
-                        >
-                          {col.label}
-                        </th>
-                      )
-                    ))}
-                    <th scope="col">Actions</th>
-                  </tr>
-                </thead>
+                <DragDropContext onDragEnd={onDragEnd}>
+                  <thead>
+                    <Droppable droppableId="columnHeaders" direction="horizontal">
+                      {(provided) => (
+                        <tr ref={provided.innerRef} {...provided.droppableProps}>
+                          {/* Render draggable column headers based on order array */}
+                          {/* Only visible columns are shown, reordered by user drag */}
+                          {order.map((key, index) => (
+                            visibleColumns[key] && (
+                              <Draggable key={key} draggableId={key} index={index}>
+                                {(provided) => (
+                                  <th
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                    key={key}
+                                    scope="col"
+                                    style={{
+                                      ...provided.draggableProps.style,
+                                      minWidth: key === 'contract_name' ? '250px' : key === 'remarks' ? '200px' : 'auto',
+                                      cursor: 'move', // Indicates draggable column
+                                      backgroundColor: '#f8f9fa', // Light background for visibility
+                                      padding: '8px',
+                                    }}
+                                  >
+                                    {columns.find(col => col.key === key).label}
+                                  </th>
+                                )}
+                              </Draggable>
+                            )
+                          ))}
+                          {provided.placeholder}
+                          {/* Actions column remains fixed and non-draggable */}
+                          <th scope="col" style={{ cursor: 'default' }}>Actions</th>
+                        </tr>
+                      )}
+                    </Droppable>
+                  </thead>
+                </DragDropContext>
                 <tbody>
+                  {/* Render table rows based on reordered and filtered columns */}
                   {contracts.map(contract => (
                     <tr key={contract.contract_id}>
-                      {columns.map(col => (
-                        visibleColumns[col.key] && (
+                      {order.map((key) => (
+                        visibleColumns[key] && (
                           <td
-                            key={col.key}
-                            data-label={col.label}
+                            key={key}
+                            data-label={columns.find(col => col.key === key).label}
                             style={{
-                              minWidth: col.key === 'contract_name' ? '250px' : col.key === 'remarks' ? '200px' : 'auto',
+                              minWidth: key === 'contract_name' ? '250px' : key === 'remarks' ? '200px' : 'auto',
                             }}
                           >
-                            {['start_date', 'end_date', 'created_at'].includes(col.key) ? (
-                              contract[col.key] ? new Date(contract[col.key]).toISOString().split('T')[0] : '-'
-                            ) : col.key === 'contract_status' ? (
+                            {['start_date', 'end_date', 'created_at'].includes(key) ? (
+                              contract[key] ? new Date(contract[key]).toISOString().split('T')[0] : '-'
+                            ) : key === 'contract_status' ? (
                               <span
                                 className={`badge bg-${contract.contract_status === 'New' ? 'success' : 'primary'}`}
                                 style={{ fontSize: '1rem', padding: '0.4em 0.8em' }}
                               >
                                 {contract.contract_status || '-'}
                               </span>
-                            ) : col.key === 'project_name' ? (
+                            ) : key === 'project_name' ? (
                               contract.project_name || '-'
                             ) : (
-                              contract[col.key] || '-'
+                              contract[key] || '-'
                             )}
                           </td>
                         )
