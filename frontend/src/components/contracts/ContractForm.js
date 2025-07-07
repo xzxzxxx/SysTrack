@@ -13,7 +13,7 @@ function ContractForm({ token }) {
     alias: '',
     jobnote: '',
     sales: '',
-    contract_name: '', // Renamed from project_name
+    contract_name: '',
     location: '',
     category: '',
     t1: '',
@@ -28,10 +28,18 @@ function ContractForm({ token }) {
     response_time: '',
     service_time: '',
     spare_parts_provider: '',
-    project_id: null // New field, default null
+    project_id: null
+  });
+  // State for custom input fields
+  const [customInputs, setCustomInputs] = useState({
+    period: '',
+    response_time: '',
+    service_time: '',
+    spare_parts_provider: '',
+    preventive: ''
   });
   const [clients, setClients] = useState([]);
-  const [projects, setProjects] = useState([]); // New state for projects
+  const [projects, setProjects] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
@@ -56,7 +64,7 @@ function ContractForm({ token }) {
         const response = await axios.get('http://localhost:3000/api/clients', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setClients(response.data);
+        setClients(response.data.data || []);
       } catch (err) {
         setError(err.response?.data?.error || 'Failed to fetch clients');
       } finally {
@@ -87,7 +95,16 @@ function ContractForm({ token }) {
         const response = await axios.get(`http://localhost:3000/api/contracts/${contract_id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setContract(response.data);
+        const contractData = response.data;
+        setContract(contractData);
+        // Initialize custom inputs for editing
+        setCustomInputs({
+          period: contractData.period && !['Option 1', 'Option 2'].includes(contractData.period) ? contractData.period : '',
+          response_time: contractData.response_time && !['Option 1', 'Option 2'].includes(contractData.response_time) ? contractData.response_time : '',
+          service_time: contractData.service_time && !['Option 1', 'Option 2'].includes(contractData.service_time) ? contractData.service_time : '',
+          spare_parts_provider: contractData.spare_parts_provider && !['Option 1', 'Option 2'].includes(contractData.spare_parts_provider) ? contractData.spare_parts_provider : '',
+          preventive: contractData.preventive && !['Option 1', 'Option 2'].includes(contractData.preventive) ? contractData.preventive : ''
+        });
       } catch (err) {
         setError(err.response?.data?.error || 'Failed to fetch contract');
       } finally {
@@ -103,6 +120,20 @@ function ContractForm({ token }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setContract(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleCustomInputChange = (e) => {
+    const { name, value } = e.target;
+    setCustomInputs(prev => ({ ...prev, [name]: value }));
+    setContract(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleRadioChange = (e) => {
+    const { name, value } = e.target;
+    setContract(prev => ({ ...prev, [name]: value === 'custom' ? customInputs[name] : value }));
+    if (value !== 'custom') {
+      setCustomInputs(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   const handleProjectChange = (e) => {
@@ -139,8 +170,61 @@ function ContractForm({ token }) {
     }
   };
 
+  // Helper to render radio buttons for a field
+  const renderRadioGroup = (name, label) => (
+    <div className="form-group">
+      <label>{label}</label>
+      <div className="form-check">
+        <input
+          type="radio"
+          name={name}
+          value="Option 1"
+          className="form-check-input"
+          checked={contract[name] === 'Option 1'}
+          onChange={handleRadioChange}
+        />
+        <label className="form-check-label">Option 1</label>
+      </div>
+      <div className="form-check">
+        <input
+          type="radio"
+          name={name}
+          value="Option 2"
+          className="form-check-input"
+          checked={contract[name] === 'Option 2'}
+          onChange={handleRadioChange}
+        />
+        <label className="form-check-label">Option 2</label>
+      </div>
+      {['period', 'response_time', 'service_time', 'spare_parts_provider', 'preventive'].includes(name) && (
+        <div className="form-check">
+          <input
+            type="radio"
+            name={name}
+            value="custom"
+            className="form-check-input"
+            checked={contract[name] && !['Option 1', 'Option 2'].includes(contract[name])}
+            onChange={handleRadioChange}
+          />
+          <label className="form-check-label">Custom</label>
+          {contract[name] && !['Option 1', 'Option 2'].includes(contract[name]) && (
+            <input
+              type="text"
+              name={name}
+              className="form-control mt-2"
+              placeholder={`Custom ${label}`}
+              value={customInputs[name]}
+              onChange={handleCustomInputChange}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   if (loading && !toast.show) return <div className="spinner-border" role="status"><span className="sr-only">Loading...</span></div>;
   if (error && !toast.show) return <div className="alert alert-danger">{error}</div>;
+  console.log('clients', clients);
 
   return (
     <div className="container">
@@ -227,7 +311,7 @@ function ContractForm({ token }) {
               />
             </div>
             <div className="form-group">
-              <label>Contract Name</label> {/* Renamed from Project Name */}
+              <label>Contract Name</label>
               <input
                 type="text"
                 name="contract_name"
@@ -242,7 +326,7 @@ function ContractForm({ token }) {
               <select
                 name="project_id"
                 className="form-control"
-                value={contract.project_id || ''} // Empty string for null
+                value={contract.project_id || ''}
                 onChange={handleProjectChange}
               >
                 <option value="">No Group</option>
@@ -262,17 +346,7 @@ function ContractForm({ token }) {
                 onChange={handleChange}
               />
             </div>
-            <div className="form-group">
-              <label>Category</label>
-              <input
-                type="text"
-                name="category"
-                className="form-control"
-                placeholder="Category"
-                value={contract.category}
-                onChange={handleChange}
-              />
-            </div>
+            {renderRadioGroup('category', 'Category')}
             <div className="form-group">
               <label>Job Note</label>
               <input
@@ -329,28 +403,6 @@ function ContractForm({ token }) {
               />
             </div>
             <div className="form-group">
-              <label>Preventive</label>
-              <input
-                type="text"
-                name="preventive"
-                className="form-control"
-                placeholder="Preventive"
-                value={contract.preventive}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>Report</label>
-              <input
-                type="text"
-                name="report"
-                className="form-control"
-                placeholder="Report"
-                value={contract.report}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="form-group">
               <label>Other</label>
               <input
                 type="text"
@@ -358,50 +410,6 @@ function ContractForm({ token }) {
                 className="form-control"
                 placeholder="Other"
                 value={contract.other}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>Period</label>
-              <input
-                type="text"
-                name="period"
-                className="form-control"
-                placeholder="Period"
-                value={contract.period}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>Response Time</label>
-              <input
-                type="text"
-                name="response_time"
-                className="form-control"
-                placeholder="Response Time"
-                value={contract.response_time}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>Service Time</label>
-              <input
-                type="text"
-                name="service_time"
-                className="form-control"
-                placeholder="Service Time"
-                value={contract.service_time}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>Spare Parts Provider</label>
-              <input
-                type="text"
-                name="spare_parts_provider"
-                className="form-control"
-                placeholder="Spare Parts Provider"
-                value={contract.spare_parts_provider}
                 onChange={handleChange}
               />
             </div>
@@ -415,6 +423,16 @@ function ContractForm({ token }) {
                 onChange={handleChange}
               />
             </div>
+          </div>
+        </div>
+        <div className="card mb-3">
+          <div className="card-header">Service Level Agreement</div>
+          <div className="card-body">
+            {renderRadioGroup('period', 'Period')}
+            {renderRadioGroup('response_time', 'Response Time')}
+            {renderRadioGroup('service_time', 'Service Time')}
+            {renderRadioGroup('spare_parts_provider', 'Spare Parts Provider')}
+            {renderRadioGroup('preventive', 'Preventive')}
           </div>
         </div>
         <button type="submit" className="btn btn-primary" disabled={loading}>

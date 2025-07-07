@@ -6,16 +6,55 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
 
-// Generate contract code (e.g., CONTRACT-YYYYMMDD-NN)
-// TODO: Fix format to category(2letter)--YY-client_id--dedicated_number--no_of_orders in future branch
-const generateContractCode = async (prefix) => {
-  const date = new Date().toISOString().slice(0, 10).replace(/-/g, ''); // e.g., 20250616
-  const result = await pool.query(
-    'SELECT COUNT(*) FROM Contracts WHERE client_code LIKE $1',
-    [`${prefix}-${date}%`]
+// Mapping for category to two-letter code
+const categoryMap = {
+  SVR: 'MS',
+  DSS: 'MD',
+  EMB: 'ME'
+};
+
+// Generate contract code (e.g., MS25A0103)
+// Format: mapped_category(2letter)YYdedicated_numberno_of_orders
+const generateContractCode = async (category, client_id) => {
+  // Validate category
+  if (!categoryMap[category]) {
+    throw new Error('Invalid category. Must be SVR, DSS, or EMB.');
+  }
+  
+  const mappedCategory = categoryMap[category]; // e.g., SVR -> MS
+  const year = new Date().getFullYear().toString().slice(-2); // Last two digits of year, e.g., "25"
+  
+  // Fetch dedicated_number from Clients table
+  const clientResult = await pool.query(
+    'SELECT dedicated_number FROM Clients WHERE client_id = $1',
+    [client_id]
   );
-  const count = parseInt(result.rows[0].count) + 1;
-  return `${prefix}-${date}-${String(count).padStart(2, '0')}`;
+  if (clientResult.rows.length === 0) {
+    throw new Error('Client not found');
+  }
+  const dedicated_number = clientResult.rows[0].dedicated_number;
+  
+  // Count existing contracts for the client (including current one)
+  const contractResult = await pool.query(
+    'SELECT COUNT(*) FROM Contracts WHERE client_id = $1',
+    [client_id]
+  );
+  const no_of_orders = parseInt(contractResult.rows[0].count) + 1; // Add 1 for current contract
+  
+  // Generate code
+  const client_code = `${mappedCategory}${year}${client_id}${dedicated_number}${String(no_of_orders).padStart(2, '0')}`;
+  
+  // Check for duplicate code
+  const duplicateCheck = await pool.query(
+    'SELECT 1 FROM Contracts WHERE client_code = $1',
+    [client_code]
+  );
+  if (duplicateCheck.rows.length > 0) {
+    console.warn(`Duplicate client_code detected: ${client_code}. Setting to null.`);
+    return null;
+  }
+  
+  return client_code;
 };
 
 // Get all contracts with search and pagination
@@ -108,11 +147,11 @@ router.post('/', async (req, res) => {
     response_time,
     service_time,
     spare_parts_provider,
-    project_id // New field
+    project_id
   } = req.body;
 
-  if (!client_id || !user_id || !start_date || !end_date) {
-    return res.status(400).json({ error: 'Missing required fields: client_id, user_id, start_date, end_date' });
+  if (!client_id || !user_id || !start_date || !end_date || !category) {
+    return res.status(400).json({ error: 'Missing required fields: client_id, user_id, start_date, end_date, category' });
   }
 
   try {
@@ -133,8 +172,14 @@ router.post('/', async (req, res) => {
       }
     }
 
-    const client_code = await generateContractCode('CONTRACT');
-    const renew_code = await generateContractCode('RENEW');
+    let client_code;
+    try {
+      client_code = await generateContractCode(category, client_id);
+    } catch (err) {
+      return res.status(400).json({ error: err.message });
+    }
+    
+    const renew_code = await generateContractCode('RENEW'); // Keep renew_code as-is for now
 
     const result = await pool.query(
       `INSERT INTO Contracts (
