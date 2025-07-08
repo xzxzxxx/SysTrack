@@ -38,6 +38,14 @@ function ContractForm({ token }) {
     spare_parts_provider: '',
     preventive: ''
   });
+  // State to track if "Custom" is selected for each field
+  const [customSelected, setCustomSelected] = useState({
+    period: false,
+    response_time: false,
+    service_time: false,
+    spare_parts_provider: false,
+    preventive: false
+  });
   const [clients, setClients] = useState([]);
   const [projects, setProjects] = useState([]);
   const [error, setError] = useState('');
@@ -97,13 +105,20 @@ function ContractForm({ token }) {
         });
         const contractData = response.data;
         setContract(contractData);
-        // Initialize custom inputs for editing
+        // Initialize custom inputs and customSelected for editing
         setCustomInputs({
-          period: contractData.period && !['Option 1', 'Option 2'].includes(contractData.period) ? contractData.period : '',
-          response_time: contractData.response_time && !['Option 1', 'Option 2'].includes(contractData.response_time) ? contractData.response_time : '',
-          service_time: contractData.service_time && !['Option 1', 'Option 2'].includes(contractData.service_time) ? contractData.service_time : '',
-          spare_parts_provider: contractData.spare_parts_provider && !['Option 1', 'Option 2'].includes(contractData.spare_parts_provider) ? contractData.spare_parts_provider : '',
-          preventive: contractData.preventive && !['Option 1', 'Option 2'].includes(contractData.preventive) ? contractData.preventive : ''
+          period: contractData.period && !['8*5', '24*5'].includes(contractData.period) ? contractData.period : '',
+          response_time: contractData.response_time && !['4hrs', '8hrs'].includes(contractData.response_time) ? contractData.response_time : '',
+          service_time: contractData.service_time && !['NBD', '48hrs'].includes(contractData.service_time) ? contractData.service_time : '',
+          spare_parts_provider: contractData.spare_parts_provider && !['cwc', 'client'].includes(contractData.spare_parts_provider) ? contractData.spare_parts_provider : '',
+          preventive: contractData.preventive && !['Bi-monthly', 'Quarterly', 'Yearly', 'Twice a Year'].includes(contractData.preventive) ? contractData.preventive : ''
+        });
+        setCustomSelected({
+          period: contractData.period && !['8*5', '24*5'].includes(contractData.period),
+          response_time: contractData.response_time && !['4hrs', '8hrs'].includes(contractData.response_time),
+          service_time: contractData.service_time && !['NBD', '48hrs'].includes(contractData.service_time),
+          spare_parts_provider: contractData.spare_parts_provider && !['cwc', 'client'].includes(contractData.spare_parts_provider),
+          preventive: contractData.preventive && !['Bi-monthly', 'Quarterly', 'Yearly', 'Twice a Year'].includes(contractData.preventive)
         });
       } catch (err) {
         setError(err.response?.data?.error || 'Failed to fetch contract');
@@ -130,8 +145,12 @@ function ContractForm({ token }) {
 
   const handleRadioChange = (e) => {
     const { name, value } = e.target;
-    setContract(prev => ({ ...prev, [name]: value === 'custom' ? customInputs[name] : value }));
-    if (value !== 'custom') {
+    if (value === 'custom') {
+      setCustomSelected(prev => ({ ...prev, [name]: true }));
+      setContract(prev => ({ ...prev, [name]: customInputs[name] || '' }));
+    } else {
+      setCustomSelected(prev => ({ ...prev, [name]: false }));
+      setContract(prev => ({ ...prev, [name]: value }));
       setCustomInputs(prev => ({ ...prev, [name]: '' }));
     }
   };
@@ -171,31 +190,22 @@ function ContractForm({ token }) {
   };
 
   // Helper to render radio buttons for a field
-  const renderRadioGroup = (name, label) => (
+  const renderRadioGroup = (name, label, options) => (
     <div className="form-group">
       <label>{label}</label>
-      <div className="form-check">
-        <input
-          type="radio"
-          name={name}
-          value="Option 1"
-          className="form-check-input"
-          checked={contract[name] === 'Option 1'}
-          onChange={handleRadioChange}
-        />
-        <label className="form-check-label">Option 1</label>
-      </div>
-      <div className="form-check">
-        <input
-          type="radio"
-          name={name}
-          value="Option 2"
-          className="form-check-input"
-          checked={contract[name] === 'Option 2'}
-          onChange={handleRadioChange}
-        />
-        <label className="form-check-label">Option 2</label>
-      </div>
+      {options.map(option => (
+        <div className="form-check" key={option}>
+          <input
+            type="radio"
+            name={name}
+            value={option}
+            className="form-check-input"
+            checked={contract[name] === option}
+            onChange={handleRadioChange}
+          />
+          <label className="form-check-label">{option}</label>
+        </div>
+      ))}
       {['period', 'response_time', 'service_time', 'spare_parts_provider', 'preventive'].includes(name) && (
         <div className="form-check">
           <input
@@ -203,11 +213,11 @@ function ContractForm({ token }) {
             name={name}
             value="custom"
             className="form-check-input"
-            checked={contract[name] && !['Option 1', 'Option 2'].includes(contract[name])}
+            checked={customSelected[name]}
             onChange={handleRadioChange}
           />
           <label className="form-check-label">Custom</label>
-          {contract[name] && !['Option 1', 'Option 2'].includes(contract[name]) && (
+          {customSelected[name] && (
             <input
               type="text"
               name={name}
@@ -224,7 +234,6 @@ function ContractForm({ token }) {
 
   if (loading && !toast.show) return <div className="spinner-border" role="status"><span className="sr-only">Loading...</span></div>;
   if (error && !toast.show) return <div className="alert alert-danger">{error}</div>;
-  console.log('clients', clients);
 
   return (
     <div className="container">
@@ -241,166 +250,157 @@ function ContractForm({ token }) {
         <div className="card mb-3">
           <div className="card-header">Basic Information</div>
           <div className="card-body">
-            <div className="form-group">
-              <label>Client</label>
-              <select name="client_id" className="form-control" value={contract.client_id} onChange={handleChange} required>
-                <option value="">Select Client</option>
-                {clients.map(client => (
-                  <option key={client.client_id} value={client.client_id}>{client.client_name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Start Date</label>
-              <input
-                type="date"
-                name="start_date"
-                className="form-control"
-                value={contract.start_date}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>End Date</label>
-              <input
-                type="date"
-                name="end_date"
-                className="form-control"
-                value={contract.end_date}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Contract Status</label>
-              <input
-                type="text"
-                name="contract_status"
-                className="form-control"
-                placeholder="e.g., Active, Expired"
-                value={contract.contract_status}
-                onChange={handleChange}
-              />
+            <div className="row">
+              <div className="col-md-6">
+                <div className="form-group">
+                  <label>Client</label>
+                  <select name="client_id" className="form-control" value={contract.client_id} onChange={handleChange} required>
+                    <option value="">Select Client</option>
+                    {clients.map(client => (
+                      <option key={client.client_id} value={client.client_id}>{client.client_name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Start Date</label>
+                  <input
+                    type="date"
+                    name="start_date"
+                    className="form-control"
+                    value={contract.start_date}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Job Note</label>
+                  <input
+                    type="text"
+                    name="jobnote"
+                    className="form-control"
+                    placeholder="Job Note"
+                    value={contract.jobnote}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="col-md-6">
+                <div className="form-group">
+                      <label>Alias</label>
+                      <input
+                        type="text"
+                        name="alias"
+                        className="form-control"
+                        placeholder="Alias"
+                        value={contract.alias}
+                        onChange={handleChange}
+                      />
+                    </div>
+                <div className="form-group">
+                  <label>End Date</label>
+                  <input
+                    type="date"
+                    name="end_date"
+                    className="form-control"
+                    value={contract.end_date}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Contract Name</label>
+                  <input
+                    type="text"
+                    name="contract_name"
+                    className="form-control"
+                    placeholder="Contract Name"
+                    value={contract.contract_name}
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
         <div className="card mb-3">
           <div className="card-header">Details</div>
           <div className="card-body">
-            <div className="form-group">
-              <label>Client Name</label>
-              <input
-                type="text"
-                name="client"
-                className="form-control"
-                placeholder="Client Name"
-                value={contract.client}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>Alias</label>
-              <input
-                type="text"
-                name="alias"
-                className="form-control"
-                placeholder="Alias"
-                value={contract.alias}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>Contract Name</label>
-              <input
-                type="text"
-                name="contract_name"
-                className="form-control"
-                placeholder="Contract Name"
-                value={contract.contract_name}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>Project</label>
-              <select
-                name="project_id"
-                className="form-control"
-                value={contract.project_id || ''}
-                onChange={handleProjectChange}
-              >
-                <option value="">No Group</option>
-                {projects.map(project => (
-                  <option key={project.project_id} value={project.project_id}>{project.project_name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Location</label>
-              <input
-                type="text"
-                name="location"
-                className="form-control"
-                placeholder="Location"
-                value={contract.location}
-                onChange={handleChange}
-              />
-            </div>
-            {renderRadioGroup('category', 'Category')}
-            <div className="form-group">
-              <label>Job Note</label>
-              <input
-                type="text"
-                name="jobnote"
-                className="form-control"
-                placeholder="Job Note"
-                value={contract.jobnote}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>Sales</label>
-              <input
-                type="text"
-                name="sales"
-                className="form-control"
-                placeholder="Sales"
-                value={contract.sales}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>T1</label>
-              <input
-                type="text"
-                name="t1"
-                className="form-control"
-                placeholder="T1"
-                value={contract.t1}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>T2</label>
-              <input
-                type="text"
-                name="t2"
-                className="form-control"
-                placeholder="T2"
-                value={contract.t2}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>T3</label>
-              <input
-                type="text"
-                name="t3"
-                className="form-control"
-                placeholder="T3"
-                value={contract.t3}
-                onChange={handleChange}
-              />
+            <div className="row">
+              <div className="col-md-6">
+                <div className="form-group">
+                  <label>Project</label>
+                  <select
+                    name="project_id"
+                    className="form-control"
+                    value={contract.project_id || ''}
+                    onChange={handleProjectChange}
+                  >
+                    <option value="">No Group</option>
+                    {projects.map(project => (
+                      <option key={project.project_id} value={project.project_id}>{project.project_name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Location</label>
+                  <input
+                    type="text"
+                    name="location"
+                    className="form-control"
+                    placeholder="Location"
+                    value={contract.location}
+                    onChange={handleChange}
+                  />
+                </div>
+                {renderRadioGroup('category', 'Category', ['SVR', 'DSS', 'EMB'])}
+              </div>
+              <div className="col-md-6">
+                <div className="form-group">
+                  <label>Sales</label>
+                  <input
+                    type="text"
+                    name="sales"
+                    className="form-control"
+                    placeholder="Sales"
+                    value={contract.sales}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>T1</label>
+                  <input
+                    type="text"
+                    name="t1"
+                    className="form-control"
+                    placeholder="T1"
+                    value={contract.t1}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>T2</label>
+                  <input
+                    type="text"
+                    name="t2"
+                    className="form-control"
+                    placeholder="T2"
+                    value={contract.t2}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>T3</label>
+                  <input
+                    type="text"
+                    name="t3"
+                    className="form-control"
+                    placeholder="T3"
+                    value={contract.t3}
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
             </div>
             <div className="form-group">
               <label>Other</label>
@@ -426,13 +426,19 @@ function ContractForm({ token }) {
           </div>
         </div>
         <div className="card mb-3">
-          <div className="card-header">Service Level Agreement</div>
+          <div className="card-header">SLA</div>
           <div className="card-body">
-            {renderRadioGroup('period', 'Period')}
-            {renderRadioGroup('response_time', 'Response Time')}
-            {renderRadioGroup('service_time', 'Service Time')}
-            {renderRadioGroup('spare_parts_provider', 'Spare Parts Provider')}
-            {renderRadioGroup('preventive', 'Preventive')}
+            <div className="row">
+              <div className="col-md-6">
+                {renderRadioGroup('period', 'Period', ['8*5', '24*5'])}
+                {renderRadioGroup('response_time', 'Response Time', ['4hrs', '8hrs'])}
+                {renderRadioGroup('service_time', 'Service Time', ['NBD', '48hrs'])}
+              </div>
+              <div className="col-md-6">
+                {renderRadioGroup('spare_parts_provider', 'Spare Parts Provider', ['cwc', 'client'])}
+                {renderRadioGroup('preventive', 'Preventive', ['Bi-monthly', 'Quarterly', 'Yearly', 'Twice a Year'])}
+              </div>
+            </div>
           </div>
         </div>
         <button type="submit" className="btn btn-primary" disabled={loading}>
