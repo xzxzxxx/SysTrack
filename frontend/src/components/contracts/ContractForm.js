@@ -22,7 +22,6 @@ function ContractForm({ token }) {
     preventive: '',
     report: '',
     other: '',
-    contract_status: '',
     remarks: '',
     period: '',
     response_time: '',
@@ -87,7 +86,7 @@ function ContractForm({ token }) {
         const response = await axios.get('http://localhost:3000/api/projects', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setProjects(response.data); // Updated to handle [{ project_id, project_name }, ...]
+        setProjects(response.data); // Handles [{ project_id, project_name }, ...]
       } catch (err) {
         console.error('Failed to fetch projects: Please ensure /api/projects endpoint is implemented', err);
       } finally {
@@ -162,6 +161,25 @@ function ContractForm({ token }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Client-side validation for required fields
+    const requiredFields = {
+      client_id: 'Client',
+      start_date: 'Start Date',
+      end_date: 'End Date',
+      jobnote: 'Job Note',
+      category: 'Category'
+    };
+    const missingFields = Object.keys(requiredFields).filter(field => !contract[field]);
+    if (missingFields.length > 0) {
+      setToast({
+        show: true,
+        message: `Please fill in the following required fields: ${missingFields.map(field => requiredFields[field]).join(', ')}`,
+        type: 'danger'
+      });
+      setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+      return;
+    }
+
     setLoading(true);
     try {
       if (contract_id) {
@@ -192,7 +210,7 @@ function ContractForm({ token }) {
   // Helper to render radio buttons for a field
   const renderRadioGroup = (name, label, options) => (
     <div className="form-group">
-      <label>{label}</label>
+      <label>{label}{name === 'category' && <span className="text-danger">*</span>}</label>
       {options.map(option => (
         <div className="form-check" key={option}>
           <input
@@ -242,7 +260,7 @@ function ContractForm({ token }) {
         <div className={`alert alert-${toast.type} alert-dismissible fade show`} role="alert">
           {toast.message}
           <button type="button" className="close" onClick={() => setToast({ show: false, message: '', type: '' })}>
-            <span>&times;</span>
+            <span>×</span>
           </button>
         </div>
       )}
@@ -253,7 +271,7 @@ function ContractForm({ token }) {
             <div className="row">
               <div className="col-md-6">
                 <div className="form-group">
-                  <label>Client</label>
+                  <label>Client<span className="text-danger">*</span></label>
                   <select name="client_id" className="form-control" value={contract.client_id} onChange={handleChange} required>
                     <option value="">Select Client</option>
                     {clients.map(client => (
@@ -262,7 +280,7 @@ function ContractForm({ token }) {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Start Date</label>
+                  <label>Start Date<span className="text-danger">*</span></label>
                   <input
                     type="date"
                     name="start_date"
@@ -273,7 +291,7 @@ function ContractForm({ token }) {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Job Note</label>
+                  <label>Job Note<span className="text-danger">*</span></label>
                   <input
                     type="text"
                     name="jobnote"
@@ -287,18 +305,18 @@ function ContractForm({ token }) {
               </div>
               <div className="col-md-6">
                 <div className="form-group">
-                      <label>Alias</label>
-                      <input
-                        type="text"
-                        name="alias"
-                        className="form-control"
-                        placeholder="Alias"
-                        value={contract.alias}
-                        onChange={handleChange}
-                      />
-                    </div>
+                  <label>Alias</label>
+                  <input
+                    type="text"
+                    name="alias"
+                    className="form-control"
+                    placeholder="Alias"
+                    value={contract.alias}
+                    onChange={handleChange}
+                  />
+                </div>
                 <div className="form-group">
-                  <label>End Date</label>
+                  <label>End Date<span className="text-danger">*</span></label>
                   <input
                     type="date"
                     name="end_date"

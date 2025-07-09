@@ -42,7 +42,7 @@ const generateContractCode = async (category, client_id) => {
   const no_of_orders = parseInt(contractResult.rows[0].count) + 1; // Add 1 for current contract
   
   // Generate code
-  const client_code = `${mappedCategory}${year}${client_id}${dedicated_number}${String(no_of_orders).padStart(2, '0')}`;
+  const client_code = `${mappedCategory}${year}${dedicated_number}${String(no_of_orders).padStart(2, '0')}`;
   
   // Check for duplicate code
   const duplicateCheck = await pool.query(
@@ -55,6 +55,20 @@ const generateContractCode = async (category, client_id) => {
   }
   
   return client_code;
+};
+
+// Calculate contract status based on start_date and end_date
+const calculateContractStatus = (start_date, end_date) => {
+  const today = new Date();
+  const start = new Date(start_date);
+  const end = new Date(end_date);
+  if (today < start) {
+    return 'Pending';
+  } else if (today > end) {
+    return 'Expired';
+  } else {
+    return 'Active';
+  }
 };
 
 // Get all contracts with search and pagination
@@ -93,8 +107,13 @@ router.get('/', async (req, res) => {
       pool.query(query, values),
       pool.query(countQuery, values.slice(0, values.length - 2))
     ]);
+    // Add contract_status dynamically
+    const contracts = dataResult.rows.map(contract => ({
+      ...contract,
+      contract_status: calculateContractStatus(contract.start_date, contract.end_date)
+    }));
     res.json({
-      data: dataResult.rows,
+      data: contracts,
       total: parseInt(countResult.rows[0].count)
     });
   } catch (err) {
@@ -114,7 +133,12 @@ router.get('/:contract_id', async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Contract not found' });
     }
-    res.json(result.rows[0]);
+    // Add contract_status dynamically
+    const contract = {
+      ...result.rows[0],
+      contract_status: calculateContractStatus(result.rows[0].start_date, result.rows[0].end_date)
+    };
+    res.json(contract);
   } catch (err) {
     console.error(err.stack);
     res.status(500).json({ error: 'Server error' });
@@ -141,7 +165,6 @@ router.post('/', async (req, res) => {
     preventive,
     report,
     other,
-    contract_status,
     remarks,
     period,
     response_time,
@@ -150,8 +173,8 @@ router.post('/', async (req, res) => {
     project_id
   } = req.body;
 
-  if (!client_id || !user_id || !start_date || !end_date || !category) {
-    return res.status(400).json({ error: 'Missing required fields: client_id, user_id, start_date, end_date, category' });
+  if (!client_id || !user_id || !start_date || !end_date || !category || !jobnote) {
+    return res.status(400).json({ error: 'Missing required fields: client_id, user_id, start_date, end_date, category, jobnote' });
   }
 
   try {
@@ -164,9 +187,8 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Invalid user_id' });
     }
 
-    // Check if project_id is valid if provided
     if (project_id) {
-      const projectCheck = await pool.query('SELECT 1 FROM projects WHERE id = $1', [project_id]);
+      const projectCheck = await pool.query('SELECT 1 FROM projects WHERE project_id = $1', [project_id]);
       if (projectCheck.rows.length === 0) {
         return res.status(400).json({ error: 'Invalid project_id' });
       }
@@ -179,15 +201,15 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: err.message });
     }
     
-    const renew_code = await generateContractCode('RENEW'); // Keep renew_code as-is for now
+    const renew_code = null; // Set to null until purpose is clarified
 
     const result = await pool.query(
       `INSERT INTO Contracts (
         client_id, user_id, start_date, end_date, client_code, renew_code,
         client, alias, jobnote, sales, contract_name, location, category,
-        t1, t2, t3, preventive, report, other, contract_status, remarks,
+        t1, t2, t3, preventive, report, other, remarks,
         period, response_time, service_time, spare_parts_provider, project_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
       RETURNING *`,
       [
         client_id,
@@ -198,18 +220,17 @@ router.post('/', async (req, res) => {
         renew_code,
         client || null,
         alias || null,
-        jobnote || null,
+        jobnote,
         sales || null,
         contract_name || null,
         location || null,
-        category || null,
+        category,
         t1 || null,
         t2 || null,
         t3 || null,
         preventive || null,
         report || null,
         other || null,
-        contract_status || null,
         remarks || null,
         period || null,
         response_time || null,
@@ -218,7 +239,12 @@ router.post('/', async (req, res) => {
         project_id || null
       ]
     );
-    res.status(201).json(result.rows[0]);
+    // Add contract_status dynamically
+    const contract = {
+      ...result.rows[0],
+      contract_status: calculateContractStatus(start_date, end_date)
+    };
+    res.status(201).json(contract);
   } catch (err) {
     console.error(err.stack);
     if (err.code === '23505') {
@@ -252,7 +278,6 @@ router.put('/:contract_id', async (req, res) => {
     preventive,
     report,
     other,
-    contract_status,
     remarks,
     period,
     response_time,
@@ -261,8 +286,8 @@ router.put('/:contract_id', async (req, res) => {
     project_id
   } = req.body;
 
-  if (!client_id || !user_id || !start_date || !end_date) {
-    return res.status(400).json({ error: 'Missing required fields: client_id, user_id, start_date, end_date' });
+  if (!client_id || !user_id || !start_date || !end_date || !category || !jobnote) {
+    return res.status(400).json({ error: 'Missing required fields: client_id, user_id, start_date, end_date, category, jobnote' });
   }
 
   try {
@@ -276,7 +301,7 @@ router.put('/:contract_id', async (req, res) => {
     }
 
     if (project_id) {
-      const projectCheck = await pool.query('SELECT 1 FROM projects WHERE id = $1', [project_id]);
+      const projectCheck = await pool.query('SELECT 1 FROM projects WHERE project_id = $1', [project_id]);
       if (projectCheck.rows.length === 0) {
         return res.status(400).json({ error: 'Invalid project_id' });
       }
@@ -287,10 +312,10 @@ router.put('/:contract_id', async (req, res) => {
         client_id = $1, user_id = $2, start_date = $3, end_date = $4,
         client = $5, alias = $6, jobnote = $7, sales = $8, contract_name = $9,
         location = $10, category = $11, t1 = $12, t2 = $13, t3 = $14,
-        preventive = $15, report = $16, other = $17, contract_status = $18,
-        remarks = $19, period = $20, response_time = $21, service_time = $22,
-        spare_parts_provider = $23, project_id = $24
-      WHERE contract_id = $25 RETURNING *`,
+        preventive = $15, report = $16, other = $17,
+        remarks = $18, period = $19, response_time = $20, service_time = $21,
+        spare_parts_provider = $22, project_id = $23
+      WHERE contract_id = $24 RETURNING *`,
       [
         client_id,
         user_id,
@@ -298,7 +323,7 @@ router.put('/:contract_id', async (req, res) => {
         end_date,
         client || null,
         alias || null,
-        jobnote || null,
+        jobnote,
         sales || null,
         contract_name || null,
         location || null,
@@ -309,7 +334,6 @@ router.put('/:contract_id', async (req, res) => {
         preventive || null,
         report || null,
         other || null,
-        contract_status || null,
         remarks || null,
         period || null,
         response_time || null,
@@ -322,7 +346,12 @@ router.put('/:contract_id', async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Contract not found' });
     }
-    res.json(result.rows[0]);
+    // Add contract_status dynamically
+    const contract = {
+      ...result.rows[0],
+      contract_status: calculateContractStatus(start_date, end_date)
+    };
+    res.json(contract);
   } catch (err) {
     console.error(err.stack);
     if (err.code === '23503') {
