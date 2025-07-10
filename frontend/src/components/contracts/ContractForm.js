@@ -5,7 +5,9 @@ import { jwtDecode } from 'jwt-decode';
 import Select from 'react-select';
 import debounce from 'lodash.debounce';
 
+// Component to create, renew, or edit contracts
 function ContractForm({ token, defaultType = 'new' }) {
+  // State to store form data for the contract
   const [contract, setContract] = useState({
     client_id: '',
     user_id: '',
@@ -31,7 +33,8 @@ function ContractForm({ token, defaultType = 'new' }) {
     spare_parts_provider: '',
     project_id: null
   });
-  // State for custom input fields
+
+  // State for custom input fields when "Custom" radio is selected
   const [customInputs, setCustomInputs] = useState({
     period: '',
     response_time: '',
@@ -39,7 +42,8 @@ function ContractForm({ token, defaultType = 'new' }) {
     spare_parts_provider: '',
     preventive: ''
   });
-  // State to track if "Custom" is selected for each field
+
+  // State to track if "Custom" radio is selected for each field
   const [customSelected, setCustomSelected] = useState({
     period: false,
     response_time: false,
@@ -47,29 +51,35 @@ function ContractForm({ token, defaultType = 'new' }) {
     spare_parts_provider: false,
     preventive: false
   });
-  const [clients, setClients] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState({ show: false, message: '', type: '' });
-  //new, renew, edit
-  const [contractType, setContractType] = useState(defaultType);
-  const [contractNameSearch, setContractNameSearch] = useState('');
-  const [jobnoteSearch, setJobnoteSearch] = useState('');
-  const [contractOptions, setContractOptions] = useState([]);
+
+  // State for dropdown data and UI feedback
+  const [clients, setClients] = useState([]); // List of clients from /api/clients
+  const [projects, setProjects] = useState([]); // List of projects from /api/projects
+  const [error, setError] = useState(''); // Error message for API failures
+  const [loading, setLoading] = useState(false); // Loading state for API calls
+  const [toast, setToast] = useState({ show: false, message: '', type: '' }); // Toast for success/error messages
+  const [contractType, setContractType] = useState(defaultType); // Mode: 'new', 'renew', or 'edit'
+  const [contractNameSearch, setContractNameSearch] = useState(''); // Search input for contract_name
+  const [jobnoteSearch, setJobnoteSearch] = useState(''); // Search input for jobnote
+  const [contractOptions, setContractOptions] = useState([]); // Autocomplete options for contract_name
+
+  // Router hooks for navigation and URL parameters
   const history = useHistory();
   const { contract_id } = useParams();
 
-  // Debounced search for contract_name
+  // Debounced function to search contracts by contract_name (with optional jobnote filter)
   const fetchContractOptions = useCallback(
     debounce(async (inputValue) => {
+      // Skip if no search input (neither contract_name nor jobnote)
       if (!inputValue && !jobnoteSearch) return;
       try {
+        // Build query parameters for search
         const params = { contract_name: inputValue || undefined, jobnote: jobnoteSearch || undefined };
         const response = await axios.get('http://localhost:3000/api/contracts', {
           headers: { Authorization: `Bearer ${token}` },
           params
         });
+        // Map API response to react-select format: { value, label, contract }
         const options = response.data.data.map(contract => ({
           value: contract.contract_id,
           label: contract.contract_name || `Contract ${contract.contract_id}`,
@@ -77,6 +87,7 @@ function ContractForm({ token, defaultType = 'new' }) {
         }));
         setContractOptions(options);
       } catch (err) {
+        // Show error toast if search fails
         setToast({ show: true, message: 'Failed to fetch contracts', type: 'danger' });
         setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
       }
@@ -84,7 +95,7 @@ function ContractForm({ token, defaultType = 'new' }) {
     [token, jobnoteSearch]
   );
 
-  // Search for exact jobnote match
+  // Handle "Confirm" button click to search for exact jobnote match
   const handleJobnoteConfirm = async () => {
     if (!jobnoteSearch) {
       setToast({ show: true, message: 'Please enter a job note to search', type: 'danger' });
@@ -101,6 +112,7 @@ function ContractForm({ token, defaultType = 'new' }) {
         setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
         return;
       }
+      // Auto-fill form with selected contract, clearing jobnote, start_date, end_date
       const selectedContract = response.data.data[0];
       setContract({
         ...selectedContract,
@@ -130,6 +142,7 @@ function ContractForm({ token, defaultType = 'new' }) {
     }
   };
 
+  // Fetch initial data (clients, projects, and contract for edit mode)
   useEffect(() => {
     if (!token) return;
 
@@ -141,7 +154,7 @@ function ContractForm({ token, defaultType = 'new' }) {
       setError('Invalid token');
     }
 
-    // Fetch clients
+    // Fetch clients for the dropdown
     const fetchClients = async () => {
       setLoading(true);
       try {
@@ -156,14 +169,14 @@ function ContractForm({ token, defaultType = 'new' }) {
       }
     };
 
-    // Fetch projects
+    // Fetch projects for the dropdown
     const fetchProjects = async () => {
       setLoading(true);
       try {
         const response = await axios.get('http://localhost:3000/api/projects', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setProjects(response.data); // Handles [{ project_id, project_name }, ...]
+        setProjects(response.data); // Expects [{ project_id, project_name }, ...]
       } catch (err) {
         console.error('Failed to fetch projects: Please ensure /api/projects endpoint is implemented', err);
       } finally {
@@ -171,7 +184,7 @@ function ContractForm({ token, defaultType = 'new' }) {
       }
     };
 
-    // Fetch contract if editing
+    // Fetch contract data for edit mode
     const fetchContract = async () => {
       if (!contract_id) return;
       setContractType('edit');
@@ -181,13 +194,15 @@ function ContractForm({ token, defaultType = 'new' }) {
           headers: { Authorization: `Bearer ${token}` }
         });
         const contractData = response.data;
+        console.log('Fetched contract data:', contractData); // Debug API response
+        // Format dates to YYYY-MM-DD for <input type="date">
+        const formatDate = (date) => date ? new Date(date).toISOString().split('T')[0] : '';
         setContract({
           ...contractData,
-          // Ensure all non-null fields are populated
           client_id: contractData.client_id || '',
           user_id: contractData.user_id || '',
-          start_date: contractData.start_date || '',
-          end_date: contractData.end_date || '',
+          start_date: formatDate(contractData.start_date),
+          end_date: formatDate(contractData.end_date),
           client: contractData.client || '',
           alias: contractData.alias || '',
           jobnote: contractData.jobnote || '',
@@ -234,23 +249,27 @@ function ContractForm({ token, defaultType = 'new' }) {
     fetchContract();
   }, [contract_id, token]);
 
+  // Trigger contract_name search when typing in renew mode
   useEffect(() => {
     if (contractType === 'renew') {
       fetchContractOptions(contractNameSearch);
     }
   }, [contractNameSearch, contractType, fetchContractOptions]);
 
+  // Handle changes to text inputs and dropdowns
   const handleChange = (e) => {
     const { name, value } = e.target;
     setContract(prev => ({ ...prev, [name]: value }));
   };
 
+  // Handle changes to custom input fields
   const handleCustomInputChange = (e) => {
     const { name, value } = e.target;
     setCustomInputs(prev => ({ ...prev, [name]: value }));
     setContract(prev => ({ ...prev, [name]: value }));
   };
 
+  // Handle radio button changes for predefined or custom values
   const handleRadioChange = (e) => {
     const { name, value } = e.target;
     if (value === 'custom') {
@@ -263,11 +282,13 @@ function ContractForm({ token, defaultType = 'new' }) {
     }
   };
 
+  // Handle project dropdown changes
   const handleProjectChange = (e) => {
     const value = e.target.value === '' ? null : parseInt(e.target.value);
     setContract(prev => ({ ...prev, project_id: value }));
   };
 
+  // Handle selection from contract_name autocomplete
   const handleContractSelect = (option) => {
     if (!option) return;
     const selectedContract = option.contract;
@@ -295,9 +316,10 @@ function ContractForm({ token, defaultType = 'new' }) {
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
   };
 
+  // Handle form submission (create or update contract)
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Client-side validation for required fields
+    // Validate required fields
     const requiredFields = {
       client_id: 'Client',
       start_date: 'Start Date',
@@ -330,16 +352,19 @@ function ContractForm({ token, defaultType = 'new' }) {
     setLoading(true);
     try {
       if (contractType === 'edit') {
+        // Update existing contract
         await axios.put(`http://localhost:3000/api/contracts/${contract_id}`, contract, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setToast({ show: true, message: 'Contract updated successfully', type: 'success' });
       } else {
+        // Create new contract (new or renew mode)
         await axios.post('http://localhost:3000/api/contracts', contract, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setToast({ show: true, message: 'Contract created successfully', type: 'success' });
       }
+      // Redirect to contracts list after success
       setTimeout(() => {
         setToast({ show: false, message: '', type: '' });
         history.push('/contracts');
@@ -354,7 +379,7 @@ function ContractForm({ token, defaultType = 'new' }) {
     }
   };
 
-  // Helper to render radio buttons for a field
+  // Helper to render radio buttons for fields with predefined options or custom input
   const renderRadioGroup = (name, label, options) => (
     <div className="form-group">
       <label>{label}{name === 'category' && <span className="text-danger">*</span>}</label>
@@ -397,12 +422,15 @@ function ContractForm({ token, defaultType = 'new' }) {
     </div>
   );
 
+  // Show loading spinner or error message if applicable
   if (loading && !toast.show) return <div className="spinner-border" role="status"><span className="sr-only">Loading...</span></div>;
   if (error && !toast.show) return <div className="alert alert-danger">{error}</div>;
 
   return (
     <div className="container">
+      {/* Form header based on mode */}
       <h2 className="my-4">{contractType === 'edit' ? 'Edit Contract' : contractType === 'new' ? 'New Contract' : 'Renew Contract'}</h2>
+      {/* Toast for success/error messages */}
       {toast.show && (
         <div className={`alert alert-${toast.type} alert-dismissible fade show`} role="alert">
           {toast.message}
@@ -411,13 +439,14 @@ function ContractForm({ token, defaultType = 'new' }) {
           </button>
         </div>
       )}
-      {/* button for new and renew contracts, hidden when edit */}
+      {/* New/Renew buttons, hidden in edit mode */}
       {contractType !== 'edit' && (
         <div className="mb-3">
           <button
             className={`btn ${contractType === 'new' ? 'btn-primary' : 'btn-outline-primary'} mr-2`}
             onClick={() => {
               setContractType('new');
+              // Reset form for new contract
               setContract({
                 client_id: '',
                 user_id: contract.user_id,
@@ -467,6 +496,7 @@ function ContractForm({ token, defaultType = 'new' }) {
             className={`btn ${contractType === 'renew' ? 'btn-primary' : 'btn-outline-primary'}`}
             onClick={() => {
               setContractType('renew');
+              // Reset form for renew mode
               setContract({
                 client_id: '',
                 user_id: contract.user_id,
@@ -514,6 +544,7 @@ function ContractForm({ token, defaultType = 'new' }) {
           </button>
         </div>
       )}
+      {/* Search card for renew mode */}
       {contractType === 'renew' && (
         <div className="card mb-3">
           <div className="card-header">Search Contract to Renew</div>
@@ -541,6 +572,7 @@ function ContractForm({ token, defaultType = 'new' }) {
                       placeholder="Enter exact job note"
                       value={jobnoteSearch}
                       onChange={(e) => setJobnoteSearch(e.target.value)}
+                      autoComplete="off" // Disable browser autocomplete
                     />
                     <div className="input-group-append">
                       <button
@@ -558,6 +590,7 @@ function ContractForm({ token, defaultType = 'new' }) {
           </div>
         </div>
       )}
+      {/* Main form */}
       <form onSubmit={handleSubmit}>
         <div className="card mb-3">
           <div className="card-header">Basic Information</div>
@@ -593,6 +626,7 @@ function ContractForm({ token, defaultType = 'new' }) {
                     placeholder="Job Note"
                     value={contract.jobnote}
                     onChange={handleChange}
+                    autoComplete="off"
                     required
                   />
                 </div>
