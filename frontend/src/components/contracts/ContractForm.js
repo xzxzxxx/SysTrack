@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useHistory, useParams } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
+import Select from 'react-select';
+import debounce from 'lodash.debounce';
 
-function ContractForm({ token }) {
+function ContractForm({ token, defaultType = 'new' }) {
   const [contract, setContract] = useState({
     client_id: '',
     user_id: '',
@@ -50,8 +52,83 @@ function ContractForm({ token }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
+  //new, renew, edit
+  const [contractType, setContractType] = useState(defaultType);
+  const [contractNameSearch, setContractNameSearch] = useState('');
+  const [jobnoteSearch, setJobnoteSearch] = useState('');
+  const [contractOptions, setContractOptions] = useState([]);
   const history = useHistory();
   const { contract_id } = useParams();
+
+  // Debounced search for contract_name
+  const fetchContractOptions = useCallback(
+    debounce(async (inputValue) => {
+      if (!inputValue && !jobnoteSearch) return;
+      try {
+        const params = { contract_name: inputValue || undefined, jobnote: jobnoteSearch || undefined };
+        const response = await axios.get('http://localhost:3000/api/contracts', {
+          headers: { Authorization: `Bearer ${token}` },
+          params
+        });
+        const options = response.data.data.map(contract => ({
+          value: contract.contract_id,
+          label: contract.contract_name || `Contract ${contract.contract_id}`,
+          contract
+        }));
+        setContractOptions(options);
+      } catch (err) {
+        setToast({ show: true, message: 'Failed to fetch contracts', type: 'danger' });
+        setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+      }
+    }, 300),
+    [token, jobnoteSearch]
+  );
+
+  // Search for exact jobnote match
+  const handleJobnoteConfirm = async () => {
+    if (!jobnoteSearch) {
+      setToast({ show: true, message: 'Please enter a job note to search', type: 'danger' });
+      setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+      return;
+    }
+    try {
+      const response = await axios.get('http://localhost:3000/api/contracts', {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { jobnote: jobnoteSearch }
+      });
+      if (response.data.data.length === 0) {
+        setToast({ show: true, message: 'No contract found with this job note', type: 'danger' });
+        setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+        return;
+      }
+      const selectedContract = response.data.data[0];
+      setContract({
+        ...selectedContract,
+        jobnote: '',
+        start_date: '',
+        end_date: ''
+      });
+      setCustomInputs({
+        period: selectedContract.period && !['8*5', '24*5'].includes(selectedContract.period) ? selectedContract.period : '',
+        response_time: selectedContract.response_time && !['4hrs', '8hrs'].includes(selectedContract.response_time) ? selectedContract.response_time : '',
+        service_time: selectedContract.service_time && !['NBD', '48hrs'].includes(selectedContract.service_time) ? selectedContract.service_time : '',
+        spare_parts_provider: selectedContract.spare_parts_provider && !['cwc', 'client'].includes(selectedContract.spare_parts_provider) ? selectedContract.spare_parts_provider : '',
+        preventive: selectedContract.preventive && !['Bi-monthly', 'Quarterly', 'Yearly', 'Twice a Year'].includes(selectedContract.preventive) ? selectedContract.preventive : ''
+      });
+      setCustomSelected({
+        period: selectedContract.period && !['8*5', '24*5'].includes(selectedContract.period),
+        response_time: selectedContract.response_time && !['4hrs', '8hrs'].includes(selectedContract.response_time),
+        service_time: selectedContract.service_time && !['NBD', '48hrs'].includes(selectedContract.service_time),
+        spare_parts_provider: selectedContract.spare_parts_provider && !['cwc', 'client'].includes(selectedContract.spare_parts_provider),
+        preventive: selectedContract.preventive && !['Bi-monthly', 'Quarterly', 'Yearly', 'Twice a Year'].includes(selectedContract.preventive)
+      });
+      setToast({ show: true, message: 'Contract loaded successfully', type: 'success' });
+      setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+    } catch (err) {
+      setToast({ show: true, message: err.response?.data?.error || 'Failed to fetch contract', type: 'danger' });
+      setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+    }
+  };
 
   useEffect(() => {
     if (!token) return;
@@ -97,14 +174,40 @@ function ContractForm({ token }) {
     // Fetch contract if editing
     const fetchContract = async () => {
       if (!contract_id) return;
+      setContractType('edit');
       setLoading(true);
       try {
         const response = await axios.get(`http://localhost:3000/api/contracts/${contract_id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const contractData = response.data;
-        setContract(contractData);
-        // Initialize custom inputs and customSelected for editing
+        setContract({
+          ...contractData,
+          // Ensure all non-null fields are populated
+          client_id: contractData.client_id || '',
+          user_id: contractData.user_id || '',
+          start_date: contractData.start_date || '',
+          end_date: contractData.end_date || '',
+          client: contractData.client || '',
+          alias: contractData.alias || '',
+          jobnote: contractData.jobnote || '',
+          sales: contractData.sales || '',
+          contract_name: contractData.contract_name || '',
+          location: contractData.location || '',
+          category: contractData.category || '',
+          t1: contractData.t1 || '',
+          t2: contractData.t2 || '',
+          t3: contractData.t3 || '',
+          preventive: contractData.preventive || '',
+          report: contractData.report || '',
+          other: contractData.other || '',
+          remarks: contractData.remarks || '',
+          period: contractData.period || '',
+          response_time: contractData.response_time || '',
+          service_time: contractData.service_time || '',
+          spare_parts_provider: contractData.spare_parts_provider || '',
+          project_id: contractData.project_id || null
+        });
         setCustomInputs({
           period: contractData.period && !['8*5', '24*5'].includes(contractData.period) ? contractData.period : '',
           response_time: contractData.response_time && !['4hrs', '8hrs'].includes(contractData.response_time) ? contractData.response_time : '',
@@ -130,6 +233,12 @@ function ContractForm({ token }) {
     fetchProjects();
     fetchContract();
   }, [contract_id, token]);
+
+  useEffect(() => {
+    if (contractType === 'renew') {
+      fetchContractOptions(contractNameSearch);
+    }
+  }, [contractNameSearch, contractType, fetchContractOptions]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -159,6 +268,33 @@ function ContractForm({ token }) {
     setContract(prev => ({ ...prev, project_id: value }));
   };
 
+  const handleContractSelect = (option) => {
+    if (!option) return;
+    const selectedContract = option.contract;
+    setContract({
+      ...selectedContract,
+      jobnote: '',
+      start_date: '',
+      end_date: ''
+    });
+    setCustomInputs({
+      period: selectedContract.period && !['8*5', '24*5'].includes(selectedContract.period) ? selectedContract.period : '',
+      response_time: selectedContract.response_time && !['4hrs', '8hrs'].includes(selectedContract.response_time) ? selectedContract.response_time : '',
+      service_time: selectedContract.service_time && !['NBD', '48hrs'].includes(selectedContract.service_time) ? selectedContract.service_time : '',
+      spare_parts_provider: selectedContract.spare_parts_provider && !['cwc', 'client'].includes(selectedContract.spare_parts_provider) ? selectedContract.spare_parts_provider : '',
+      preventive: selectedContract.preventive && !['Bi-monthly', 'Quarterly', 'Yearly', 'Twice a Year'].includes(selectedContract.preventive) ? selectedContract.preventive : ''
+    });
+    setCustomSelected({
+      period: selectedContract.period && !['8*5', '24*5'].includes(selectedContract.period),
+      response_time: selectedContract.response_time && !['4hrs', '8hrs'].includes(selectedContract.response_time),
+      service_time: selectedContract.service_time && !['NBD', '48hrs'].includes(selectedContract.service_time),
+      spare_parts_provider: selectedContract.spare_parts_provider && !['cwc', 'client'].includes(selectedContract.spare_parts_provider),
+      preventive: selectedContract.preventive && !['Bi-monthly', 'Quarterly', 'Yearly', 'Twice a Year'].includes(selectedContract.preventive)
+    });
+    setToast({ show: true, message: 'Contract loaded successfully', type: 'success' });
+    setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     // Client-side validation for required fields
@@ -180,9 +316,20 @@ function ContractForm({ token }) {
       return;
     }
 
+    // In renew mode, ensure at least one search field was used
+    if (contractType === 'renew' && !contractNameSearch && !jobnoteSearch) {
+      setToast({
+        show: true,
+        message: 'Please search by contract name or job note to renew a contract',
+        type: 'danger'
+      });
+      setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+      return;
+    }
+
     setLoading(true);
     try {
-      if (contract_id) {
+      if (contractType === 'edit') {
         await axios.put(`http://localhost:3000/api/contracts/${contract_id}`, contract, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -255,13 +402,160 @@ function ContractForm({ token }) {
 
   return (
     <div className="container">
-      <h2 className="my-4">{contract_id ? 'Edit Contract' : 'New Contract'}</h2>
+      <h2 className="my-4">{contractType === 'edit' ? 'Edit Contract' : contractType === 'new' ? 'New Contract' : 'Renew Contract'}</h2>
       {toast.show && (
         <div className={`alert alert-${toast.type} alert-dismissible fade show`} role="alert">
           {toast.message}
           <button type="button" className="close" onClick={() => setToast({ show: false, message: '', type: '' })}>
             <span>×</span>
           </button>
+        </div>
+      )}
+      {/* button for new and renew contracts, hidden when edit */}
+      {contractType !== 'edit' && (
+        <div className="mb-3">
+          <button
+            className={`btn ${contractType === 'new' ? 'btn-primary' : 'btn-outline-primary'} mr-2`}
+            onClick={() => {
+              setContractType('new');
+              setContract({
+                client_id: '',
+                user_id: contract.user_id,
+                start_date: '',
+                end_date: '',
+                client: '',
+                alias: '',
+                jobnote: '',
+                sales: '',
+                contract_name: '',
+                location: '',
+                category: '',
+                t1: '',
+                t2: '',
+                t3: '',
+                preventive: '',
+                report: '',
+                other: '',
+                remarks: '',
+                period: '',
+                response_time: '',
+                service_time: '',
+                spare_parts_provider: '',
+                project_id: null
+              });
+              setCustomInputs({
+                period: '',
+                response_time: '',
+                service_time: '',
+                spare_parts_provider: '',
+                preventive: ''
+              });
+              setCustomSelected({
+                period: false,
+                response_time: false,
+                service_time: false,
+                spare_parts_provider: false,
+                preventive: false
+              });
+              setContractNameSearch('');
+              setJobnoteSearch('');
+            }}
+          >
+            Create New Contract
+          </button>
+          <button
+            className={`btn ${contractType === 'renew' ? 'btn-primary' : 'btn-outline-primary'}`}
+            onClick={() => {
+              setContractType('renew');
+              setContract({
+                client_id: '',
+                user_id: contract.user_id,
+                start_date: '',
+                end_date: '',
+                client: '',
+                alias: '',
+                jobnote: '',
+                sales: '',
+                contract_name: '',
+                location: '',
+                category: '',
+                t1: '',
+                t2: '',
+                t3: '',
+                preventive: '',
+                report: '',
+                other: '',
+                remarks: '',
+                period: '',
+                response_time: '',
+                service_time: '',
+                spare_parts_provider: '',
+                project_id: null
+              });
+              setCustomInputs({
+                period: '',
+                response_time: '',
+                service_time: '',
+                spare_parts_provider: '',
+                preventive: ''
+              });
+              setCustomSelected({
+                period: false,
+                response_time: false,
+                service_time: false,
+                spare_parts_provider: false,
+                preventive: false
+              });
+              setContractNameSearch('');
+              setJobnoteSearch('');
+            }}
+          >
+            Renew Existing Contract
+          </button>
+        </div>
+      )}
+      {contractType === 'renew' && (
+        <div className="card mb-3">
+          <div className="card-header">Search Contract to Renew</div>
+          <div className="card-body">
+            <div className="row">
+              <div className="col-md-6">
+                <div className="form-group">
+                  <label>Search by Contract Name</label>
+                  <Select
+                    options={contractOptions}
+                    onInputChange={(value) => setContractNameSearch(value)}
+                    onChange={handleContractSelect}
+                    placeholder="Type contract name..."
+                    isClearable
+                  />
+                </div>
+              </div>
+              <div className="col-md-6">
+                <div className="form-group">
+                  <label>Search by Job Note<span className="text-danger">*</span></label>
+                  <div className="input-group">
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Enter exact job note"
+                      value={jobnoteSearch}
+                      onChange={(e) => setJobnoteSearch(e.target.value)}
+                    />
+                    <div className="input-group-append">
+                      <button
+                        className="btn btn-primary"
+                        onClick={handleJobnoteConfirm}
+                        disabled={!jobnoteSearch}
+                      >
+                        Confirm
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
       <form onSubmit={handleSubmit}>
@@ -460,7 +754,7 @@ function ContractForm({ token }) {
           </div>
         </div>
         <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? 'Saving...' : 'Save'}
+          {loading ? 'Saving...' : contractType === 'edit' ? 'Update' : 'Save'}
         </button>
       </form>
     </div>

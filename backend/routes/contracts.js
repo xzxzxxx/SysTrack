@@ -73,7 +73,7 @@ const calculateContractStatus = (start_date, end_date) => {
 
 // Get all contracts with search and pagination
 router.get('/', async (req, res) => {
-  const { search, page = 1, limit = 50, project_id } = req.query;
+  const { search, contract_name, jobnote, page = 1, limit = 50, project_id } = req.query;
   const offset = (page - 1) * limit;
   let query = `
     SELECT c.*, p.project_name 
@@ -88,6 +88,15 @@ router.get('/', async (req, res) => {
   if (search) {
     conditions.push('c.contract_id::text ILIKE $1 OR c.client_code ILIKE $1 OR c.contract_name ILIKE $1');
     values.push(`%${search}%`);
+  }
+  //Search when create renew contracts
+  if (contract_name) {
+    conditions.push('c.contract_name ILIKE $' + (values.length + 1));
+    values.push(`%${contract_name}%`);
+  }
+  if (jobnote) {
+    conditions.push('LOWER(c.jobnote) = LOWER($' + (values.length + 1) + ')');
+    values.push(jobnote);
   }
   if (project_id) {
     conditions.push('c.project_id = $' + (values.length + 1));

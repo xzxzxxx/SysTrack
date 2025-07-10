@@ -49,10 +49,15 @@ function App() {
           </Route>
           <Route path="/contracts/new">
             <Layout token={token} logout={logout}>
-              <ContractForm token={token} />
+              <ContractForm token={token} defaultType="new" />
             </Layout>
           </Route>
-          <Route path="/contracts/:id/edit">
+          <Route path="/contracts/renew">
+            <Layout token={token} logout={logout}>
+              <ContractForm token={token} defaultType="renew" />
+            </Layout>
+          </Route>
+          <Route path="/contracts/:contract_id/edit">
             <Layout token={token} logout={logout}>
               <ContractForm token={token} />
             </Layout>
