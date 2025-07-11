@@ -174,11 +174,13 @@ function ContractForm({ token, defaultType = 'new' }) {
       setLoading(true);
       try {
         const response = await axios.get('http://localhost:3000/api/projects', {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          params: { page: 1, limit: 1000 } // Fetch all projects with high limit
         });
-        setProjects(response.data); // Expects [{ project_id, project_name }, ...]
+        setProjects(response.data.data); // Expects { data: [{ project_id, project_name }, ...] }
       } catch (err) {
         console.error('Failed to fetch projects: Please ensure /api/projects endpoint is implemented', err);
+        setError(err.response?.data?.error || 'Failed to fetch projects');
       } finally {
         setLoading(false);
       }
