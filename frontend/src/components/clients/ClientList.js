@@ -23,6 +23,7 @@ function ClientList({ token }) {
     { key: 'dedicated_number', label: 'Dedicated Number' },
     { key: 'no_of_orders', label: 'Orders' },
     { key: 'no_of_renew', label: 'Renewals' },
+    { key: 'email', label: 'Email' }
   ];
 
   const { visibleColumns, toggleColumn, resetColumns } = useColumnFilter(columns, 'client_columns');

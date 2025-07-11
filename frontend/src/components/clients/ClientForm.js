@@ -3,12 +3,7 @@ import axios from 'axios';
 import { useHistory, useParams } from 'react-router-dom';
 
 function ClientForm({ token }) {
-  const [client, setClient] = useState({
-    client_name: '',
-    dedicated_number: '',
-    no_of_orders: 0,
-    no_of_renew: 0
-  });
+  const [client, setClient] = useState({ client_name: '', email: '' });
   const [error, setError] = useState('');
   const history = useHistory();
   const { id } = useParams();
@@ -53,47 +48,35 @@ function ClientForm({ token }) {
   };
 
   return (
-    <div>
-      <h2>{id ? 'Edit Client' : 'New Client'}</h2>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit}>
+      <div className="mb-3">
+        <label htmlFor="client_name">Client Name</label>
         <input
           type="text"
+          className="form-control"
+          id="client_name"
           name="client_name"
-          placeholder="Client Name"
           value={client.client_name}
           onChange={handleChange}
           required
         />
+      </div>
+      <div className="mb-3">
+        <label htmlFor="email">Email (Optional)</label>
         <input
-          type="text"
-          name="dedicated_number"
-          placeholder="Dedicated Number"
-          value={client.dedicated_number}
+          type="email"
+          className="form-control"
+          id="email"
+          name="email"
+          value={client.email}
           onChange={handleChange}
-          required
         />
-        <input
-          type="number"
-          name="no_of_orders"
-          placeholder="Number of Orders"
-          value={client.no_of_orders}
-          onChange={handleChange}
-          min="0"
-          required
-        />
-        <input
-          type="number"
-          name="no_of_renew"
-          placeholder="Number of Renewals"
-          value={client.no_of_renew}
-          onChange={handleChange}
-          min="0"
-          required
-        />
-        <button type="submit">Save</button>
-      </form>
-    </div>
+      </div>
+      <button type="submit" className="btn btn-primary">
+        {id ? 'Update Client' : 'Create Client'}
+      </button>
+      {error && <div className="alert alert-danger mt-3">{error}</div>}
+    </form>
   );
 }
 

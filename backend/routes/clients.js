@@ -6,7 +6,7 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
 
-// Get all clients with search, sort, and pagination
+// Get all clients (updated to include dynamic counts)
 router.get('/', async (req, res) => {
   const { search, sortBy, sortOrder, page = 1, limit = 50 } = req.query;
   const offset = (page - 1) * parseInt(limit);
@@ -14,20 +14,25 @@ router.get('/', async (req, res) => {
   let whereClause = '';
   let orderByClause = '';
 
-  // Search by client_name, dedicated_number, or client_id
+  // Search by client_name, dedicated_number, or email
   if (search) {
-    whereClause = ' WHERE client_name ILIKE $1 OR dedicated_number ILIKE $1 OR client_id::text ILIKE $1';
+    whereClause = ' WHERE client_name ILIKE $1 OR dedicated_number ILIKE $1 OR email ILIKE $1';
     values.push(`%${search}%`);
   }
 
-  // Sort by no_of_orders or no_of_renew
+  // Sort by dynamic no_of_orders or no_of_renew (calculated in query)
   if (sortBy === 'no_of_orders' || sortBy === 'no_of_renew') {
     const order = sortOrder === 'desc' ? 'DESC' : 'ASC';
     orderByClause = ` ORDER BY ${sortBy} ${order}`;
   }
 
+  // Main query with dynamic counts using subqueries
   const query = `
-    SELECT * FROM Clients
+    SELECT 
+      c.*, 
+      (SELECT COUNT(*) FROM Contracts WHERE client_id = c.client_id) AS no_of_orders,
+      (SELECT COUNT(*) FROM Contracts WHERE client_id = c.client_id AND previous_contract IS NOT NULL) AS no_of_renew
+    FROM Clients c
     ${whereClause}
     ${orderByClause}
     LIMIT $${values.length + 1}
@@ -54,11 +59,18 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get a single client by ID
+// Get a single client (updated with dynamic counts)
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query('SELECT * FROM Clients WHERE client_id = $1', [id]);
+    const result = await pool.query(`
+      SELECT 
+        c.*, 
+        (SELECT COUNT(*) FROM Contracts WHERE client_id = c.client_id) AS no_of_orders,
+        (SELECT COUNT(*) FROM Contracts WHERE client_id = c.client_id AND previous_contract IS NOT NULL) AS no_of_renew
+      FROM Clients c 
+      WHERE client_id = $1
+    `, [id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Client not found' });
     }
@@ -69,19 +81,41 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create a client
+// Create a client (updated for simplified input and auto-generation)
 router.post('/', async (req, res) => {
-  const { client_name, dedicated_number, no_of_orders, no_of_renew } = req.body;
-  if (!client_name || !dedicated_number || no_of_orders == null || no_of_renew == null) {
-    return res.status(400).json({ error: 'Missing required fields: client_name, dedicated_number, no_of_orders, no_of_renew' });
+  const { client_name, email } = req.body; // Only accept name and optional email
+  if (!client_name) {
+    return res.status(400).json({ error: 'Missing required field: client_name' });
   }
-  if (no_of_orders < 0 || no_of_renew < 0) {
-    return res.status(400).json({ error: 'no_of_orders and no_of_renew must be non-negative' });
+
+  // Optional: Basic email validation if provided (modern regex for format check)
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Invalid email format' });
   }
+
   try {
+    // Generate dedicated_number
+    let firstChar = client_name.charAt(0).toUpperCase(); // Get first character, uppercase for consistency
+    // If first character is not a letter, default to 'X' (handles cases like "123 Corp")
+    if (!/[A-Z]/.test(firstChar)) {
+      firstChar = 'X'; // Fallback for non-letter starts, e.g., numbers or symbols
+    }
+
+    // Count existing clients starting with this letter (for sequential numbering)
+    const countResult = await pool.query(
+      'SELECT COUNT(*) FROM Clients WHERE dedicated_number LIKE $1',
+      [`${firstChar}%`]
+    );
+    const count = parseInt(countResult.rows[0].count, 10);
+
+    // Generate number with 2-digit padding (e.g., A01, A02)
+    const number = String(count + 1).padStart(2, '0');
+    const dedicated_number = `${firstChar}${number}`;
+
+    // Insert into DB
     const result = await pool.query(
-      'INSERT INTO Clients (client_name, dedicated_number, no_of_orders, no_of_renew) VALUES ($1, $2, $3, $4) RETURNING *',
-      [client_name, dedicated_number, no_of_orders, no_of_renew]
+      'INSERT INTO Clients (client_name, dedicated_number, email) VALUES ($1, $2, $3) RETURNING *',
+      [client_name, dedicated_number, email || null] // Use null if email not provided
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
