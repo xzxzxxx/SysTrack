@@ -4,6 +4,7 @@ import { useHistory, useParams } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import Select from 'react-select';
 import debounce from 'lodash.debounce';
+import AsyncSelect from 'react-select/async';
 
 // Component to create, renew, or edit contracts
 function ContractForm({ token, defaultType = 'new' }) {
@@ -251,6 +252,42 @@ function ContractForm({ token, defaultType = 'new' }) {
     fetchContract();
   }, [contract_id, token]);
 
+  // Load clients async with search
+  const loadClientOptions = (inputValue, callback) => {
+    if (!inputValue) return callback([]);
+    axios.get('http://localhost:3000/api/clients', {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { search: inputValue, limit: 50 }
+    }).then(response => {
+      const options = response.data.data.map(client => ({
+        value: client.client_id,
+        label: `${client.client_name} (${client.dedicated_number})`
+      }));
+      callback(options);
+    }).catch(err => {
+      setToast({ show: true, message: 'Failed to load clients', type: 'danger' });
+      callback([]);
+    });
+  };
+
+  // Load projects async with search
+  const loadProjectOptions = (inputValue, callback) => {
+    if (!inputValue) return callback([]);
+    axios.get('http://localhost:3000/api/projects', {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { search: inputValue, limit: 50 }
+    }).then(response => {
+      const options = response.data.data.map(project => ({
+        value: project.project_id,
+        label: project.project_name
+      }));
+      callback(options);
+    }).catch(err => {
+      setToast({ show: true, message: 'Failed to load projects', type: 'danger' });
+      callback([]);
+    });
+  };
+  
   // Trigger contract_name search when typing in renew mode
   useEffect(() => {
     if (contractType === 'renew') {
@@ -600,13 +637,16 @@ function ContractForm({ token, defaultType = 'new' }) {
             <div className="row">
               <div className="col-md-6">
                 <div className="form-group">
-                  <label>Client<span className="text-danger">*</span></label>
-                  <select name="client_id" className="form-control" value={contract.client_id} onChange={handleChange} required>
-                    <option value="">Select Client</option>
-                    {clients.map(client => (
-                      <option key={client.client_id} value={client.client_id}>{client.client_name}</option>
-                    ))}
-                  </select>
+                  <label htmlFor="client_id">Client</label>
+                  <AsyncSelect
+                    cacheOptions
+                    loadOptions={debounce(loadClientOptions, 300)} // Use your existing debounce
+                    defaultOptions // Pre-load some if needed
+                    onChange={(selected) => setContract(prev => ({ ...prev, client_id: selected ? selected.value : '' }))}
+                    value={clients.find(c => c.client_id === contract.client_id) ? { value: contract.client_id, label: `${contract.client_name} (${contract.dedicated_number || ''})` } : null} // For edit mode
+                    placeholder="Search clients..."
+                    isClearable
+                  />
                 </div>
                 <div className="form-group">
                   <label>Start Date<span className="text-danger">*</span></label>
@@ -677,18 +717,16 @@ function ContractForm({ token, defaultType = 'new' }) {
             <div className="row">
               <div className="col-md-6">
                 <div className="form-group">
-                  <label>Project</label>
-                  <select
-                    name="project_id"
-                    className="form-control"
-                    value={contract.project_id || ''}
-                    onChange={handleProjectChange}
-                  >
-                    <option value="">No Group</option>
-                    {projects.map(project => (
-                      <option key={project.project_id} value={project.project_id}>{project.project_name}</option>
-                    ))}
-                  </select>
+                  <label htmlFor="project_id">Project (Optional)</label>
+                  <AsyncSelect
+                    cacheOptions
+                    loadOptions={debounce(loadProjectOptions, 300)}
+                    defaultOptions
+                    onChange={(selected) => setContract(prev => ({ ...prev, project_id: selected ? selected.value : null }))}
+                    value={projects.find(p => p.project_id === contract.project_id) ? { value: contract.project_id, label: contract.project_name } : null} // For edit mode
+                    placeholder="Search projects..."
+                    isClearable
+                  />
                 </div>
                 <div className="form-group">
                   <label>Location</label>

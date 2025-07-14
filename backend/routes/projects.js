@@ -6,36 +6,42 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
 
-// Get projects with pagination, associated contracts, clients, and users
+// Get projects with pagination and optional search by project_name
 router.get('/', async (req, res) => {
-  // Get page and limit from query parameters, with defaults
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
+  const { search, page = 1, limit = 10 } = req.query; // Add search param
   const offset = (page - 1) * limit;
+  let query = `
+    SELECT p.project_id, p.project_name, p.created_at,
+           c.client_name, u.username,
+           json_agg(c2.*) AS contracts
+    FROM projects p
+    LEFT JOIN clients c ON p.client_id = c.client_id
+    LEFT JOIN users u ON p.user_id = u.user_id
+    LEFT JOIN contracts c2 ON c2.project_id = p.project_id
+  `;
+  let countQuery = 'SELECT COUNT(*) AS total FROM projects p';
+  const values = [];
+  let whereClause = '';
+
+  if (search) {
+    whereClause = ' WHERE p.project_name ILIKE $1';
+    values.push(`%${search}%`);
+  }
+
+  query += `${whereClause} GROUP BY p.project_id, p.project_name, p.created_at, c.client_name, u.username
+    ORDER BY p.project_id LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
+  countQuery += whereClause;
+
+  values.push(limit, offset);
 
   try {
-    // Query for paginated projects
-    const projectsQuery = await pool.query(`
-      SELECT p.project_id, p.project_name, p.created_at,
-             c.client_name, u.username,
-             json_agg(c2.*) AS contracts
-      FROM projects p
-      LEFT JOIN clients c ON p.client_id = c.client_id
-      LEFT JOIN users u ON p.user_id = u.user_id
-      LEFT JOIN contracts c2 ON c2.project_id = p.project_id
-      GROUP BY p.project_id, p.project_name, p.created_at, c.client_name, u.username
-      ORDER BY p.project_id
-      LIMIT $1 OFFSET $2
-    `, [limit, offset]);
-
-    // Query for total project count
-    const totalQuery = await pool.query('SELECT COUNT(*) AS total FROM projects');
-    const total = parseInt(totalQuery.rows[0].total);
-
-    // Return paginated response
+    const [projectsQuery, totalQuery] = await Promise.all([
+      pool.query(query, values),
+      pool.query(countQuery, values.slice(0, -2))
+    ]);
     res.json({
       data: projectsQuery.rows,
-      total
+      total: parseInt(totalQuery.rows[0].total)
     });
   } catch (err) {
     console.error(err.stack);
