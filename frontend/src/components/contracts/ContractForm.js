@@ -658,14 +658,15 @@ function ContractForm({ token, defaultType = 'new' }) {
         </div>
       )}
       {/* Main form */}
-      <form onSubmit={handleSubmit}>
+      {/* noValidate stop hmtl validation and let js handle it */}
+      <form onSubmit={handleSubmit} noValidate>
         <div className="card mb-3">
           <div className="card-header">Basic Information</div>
           <div className="card-body">
             <div className="row">
               <div className="col-md-6">
                 <div className="form-group">
-                  <label htmlFor="client_id">Client</label>
+                  <label htmlFor="client_id">Client<span className="text-danger">*</span></label>
                   <AsyncSelect
                     cacheOptions
                     loadOptions={debounce(loadClientOptions, 300)} // Use your existing debounce

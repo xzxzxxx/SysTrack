@@ -264,6 +264,7 @@ function ContractList({ token }) {
                                     scope="col"
                                     style={{
                                       ...provided.draggableProps.style,
+                                      whiteSpace: 'nowrap', // Prevent header text from wrapping
                                       minWidth: key === 'contract_name' ? '250px' : key === 'remarks' ? '200px' : 'auto',
                                       cursor: 'move', // Indicates draggable column
                                       backgroundColor: '#f8f9fa', // Light background for visibility
