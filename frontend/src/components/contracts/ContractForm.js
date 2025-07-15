@@ -642,10 +642,23 @@ function ContractForm({ token, defaultType = 'new' }) {
                     cacheOptions
                     loadOptions={debounce(loadClientOptions, 300)} // Use your existing debounce
                     defaultOptions // Pre-load some if needed
-                    onChange={(selected) => setContract(prev => ({ ...prev, client_id: selected ? selected.value : '' }))}
-                    value={clients.find(c => c.client_id === contract.client_id) ? { value: contract.client_id, label: `${contract.client_name} (${contract.dedicated_number || ''})` } : null} // For edit mode
                     placeholder="Search clients..."
                     isClearable
+                    value={
+                      contract.client_id && contract.client_name ? {
+                        value: contract.client_id,
+                        label: `${contract.client_name} (${contract.dedicated_number || ''})`
+                      } : null
+                    }
+                    onChange={(selected) => {
+                      setContract(prev => ({
+                        ...prev,
+                        client_id: selected ? selected.value : '',
+                        // Also update the name and number in state for consistency
+                        client_name: selected ? selected.label.split(' (')[0] : '',
+                        dedicated_number: selected ? selected.label.match(/\(([^)]+)\)/)?.[1] || '' : ''
+                      }));
+                    }}
                   />
                 </div>
                 <div className="form-group">
@@ -722,10 +735,21 @@ function ContractForm({ token, defaultType = 'new' }) {
                     cacheOptions
                     loadOptions={debounce(loadProjectOptions, 300)}
                     defaultOptions
-                    onChange={(selected) => setContract(prev => ({ ...prev, project_id: selected ? selected.value : null }))}
-                    value={projects.find(p => p.project_id === contract.project_id) ? { value: contract.project_id, label: contract.project_name } : null} // For edit mode
                     placeholder="Search projects..."
                     isClearable
+                    value={
+                      contract.project_id && contract.project_name ? {
+                        value: contract.project_id,
+                        label: contract.project_name
+                      } : null
+                    }//for edit
+                    onChange={(selected) => {
+                      setContract(prev => ({
+                        ...prev,
+                        project_id: selected ? selected.value : null,
+                        project_name: selected ? selected.label : ''
+                      }));
+                    }}
                   />
                 </div>
                 <div className="form-group">

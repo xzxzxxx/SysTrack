@@ -136,7 +136,15 @@ router.get('/:contract_id', async (req, res) => {
   const { contract_id } = req.params;
   try {
     const result = await pool.query(
-      'SELECT c.*, p.project_name FROM Contracts c LEFT JOIN projects p ON c.project_id = p.project_id WHERE c.contract_id = $1',
+      `SELECT
+        c.*,
+        p.project_name,
+        cl.client_name,
+        cl.dedicated_number
+      FROM Contracts c
+      LEFT JOIN projects p ON c.project_id = p.project_id
+      LEFT JOIN clients cl ON c.client_id = cl.client_id
+      WHERE c.contract_id = $1`,
       [contract_id]
     );
     if (result.rows.length === 0) {
