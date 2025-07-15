@@ -71,6 +71,24 @@ const calculateContractStatus = (start_date, end_date) => {
   }
 };
 
+// Date Validation Helper Function ---
+const validateContractDates = (start_date, end_date) => {
+  const startDate = new Date(start_date);
+  const endDate = new Date(end_date);
+  const currentYear = new Date().getFullYear();
+
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    return 'Invalid date format provided.';
+  }
+  if (startDate.getFullYear() < currentYear - 100 || startDate.getFullYear() > currentYear + 100) {
+    return 'Start date year is out of the acceptable range.';
+  }
+  if (endDate <= startDate) {
+    return 'End date must be after the start date.';
+  }
+  return null; // No errors
+};
+
 // Get all contracts with search and pagination
 router.get('/', async (req, res) => {
   const { search, contract_name, jobnote, page = 1, limit = 50, project_id } = req.query;
@@ -194,6 +212,11 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'Missing required fields: client_id, user_id, start_date, end_date, category, jobnote' });
   }
 
+  const dateError = validateContractDates(start_date, end_date);
+  if (dateError) {
+    return res.status(400).json({ error: dateError });
+  }
+
   try {
     const clientCheck = await pool.query('SELECT 1 FROM Clients WHERE client_id = $1', [client_id]);
     if (clientCheck.rows.length === 0) {
@@ -306,6 +329,8 @@ router.put('/:contract_id', async (req, res) => {
   if (!client_id || !user_id || !start_date || !end_date || !category || !jobnote) {
     return res.status(400).json({ error: 'Missing required fields: client_id, user_id, start_date, end_date, category, jobnote' });
   }
+
+  
 
   try {
     const clientCheck = await pool.query('SELECT 1 FROM Clients WHERE client_id = $1', [client_id]);

@@ -367,6 +367,7 @@ function ContractForm({ token, defaultType = 'new' }) {
       category: 'Category'
     };
     const missingFields = Object.keys(requiredFields).filter(field => !contract[field]);
+    console.log('Missing fields:', missingFields); // Debug missing fields
     if (missingFields.length > 0) {
       setToast({
         show: true,
@@ -384,6 +385,33 @@ function ContractForm({ token, defaultType = 'new' }) {
         message: 'Please search by contract name or job note to renew a contract',
         type: 'danger'
       });
+      setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+      return;
+    }
+
+    // --- Date Validation Logic ---
+    const { start_date, end_date } = contract;
+    const startDate = new Date(start_date);
+    const endDate = new Date(end_date);
+    const currentYear = new Date().getFullYear();
+
+    // 1. Check if dates are valid
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      setToast({ show: true, message: 'Invalid date format. Please use the date picker.', type: 'danger' });
+      setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+      return;
+    }
+
+    // 2. Check if the year is within a reasonable range (e.g., +/- 100 years from now)
+    if (startDate.getFullYear() < currentYear - 100 || startDate.getFullYear() > currentYear + 100) {
+      setToast({ show: true, message: 'Start date year is out of the acceptable range.', type: 'danger' });
+      setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+      return;
+    }
+
+    // 3. Check if end_date is after start_date
+    if (endDate <= startDate) {
+      setToast({ show: true, message: 'End date must be after the start date.', type: 'danger' });
       setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
       return;
     }
