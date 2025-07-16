@@ -49,4 +49,27 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Create a new project
+router.post('/', async (req, res) => {
+  const { project_name, client_id, user_id } = req.body;
+
+  // Basic validation
+  if (!project_name || !client_id) {
+    return res.status(400).json({ error: 'Missing required fields: project_name and client_id are required.' });
+  }
+
+  try {
+    const result = await pool.query(
+      'INSERT INTO projects (project_name, client_id, user_id) VALUES ($1, $2, $3) RETURNING *',
+      [project_name, client_id, user_id]
+    );
+    // Return the newly created project object
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error(err.stack);
+    // Handle potential foreign key violations or other DB errors
+    res.status(500).json({ error: 'Server error while creating project' });
+  }
+});
+
 module.exports = router;

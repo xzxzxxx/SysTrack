@@ -5,6 +5,7 @@ import { jwtDecode } from 'jwt-decode';
 import Select from 'react-select';
 import debounce from 'lodash.debounce';
 import AsyncSelect from 'react-select/async';
+import CreationModal from '../common/CreationModal';
 
 // Component to create, renew, or edit contracts
 function ContractForm({ token, defaultType = 'new' }) {
@@ -446,6 +447,61 @@ function ContractForm({ token, defaultType = 'new' }) {
     }
   };
 
+  // --- NEW: State to manage the modal ---
+  const [modalConfig, setModalConfig] = useState({
+    show: false,
+    type: null, // will be 'client' or 'project'
+  });
+
+  // --- NEW: Handler to close the modal ---
+  const handleModalClose = () => {
+    setModalConfig({ show: false, type: null });
+  };
+
+  // --- NEW: Handler to save data from the modal ---
+  const handleModalSave = async (newData) => {
+    const { type } = modalConfig;
+    const token = localStorage.getItem('token'); // or however you get your token
+    
+    try {
+      if (type === 'client') {
+        // API call to create a new client
+        const response = await axios.post('http://localhost:3000/api/clients', newData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const newClient = response.data;
+        // Update the contract form state with the new client's details
+        setContract(prev => ({
+          ...prev,
+          client_id: newClient.client_id,
+          client_name: newClient.client_name,
+          dedicated_number: newClient.dedicated_number,
+        }));
+      } else if (type === 'project') {
+        // API call to create a new project
+        const response = await axios.post('http://localhost:3000/api/projects', {
+          ...newData,
+          client_id: contract.client_id, // Important: pass the currently selected client_id
+          user_id: 1 // Replace with the actual logged-in user's ID
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const newProject = response.data;
+        // Update the contract form state with the new project's details
+        setContract(prev => ({
+          ...prev,
+          project_id: newProject.project_id,
+          project_name: newProject.project_name,
+        }));
+      }
+      handleModalClose(); // Close modal on success
+    } catch (err) {
+      console.error(`Failed to create ${type}`, err);
+      // You can show a toast error message here
+      alert(`Error: Could not create the new ${type}.`);
+    }
+  };
+
   // Helper to render radio buttons for fields with predefined options or custom input
   const renderRadioGroup = (name, label, options) => (
     <div className="form-group">
@@ -667,28 +723,38 @@ function ContractForm({ token, defaultType = 'new' }) {
               <div className="col-md-6">
                 <div className="form-group">
                   <label htmlFor="client_id">Client<span className="text-danger">*</span></label>
-                  <AsyncSelect
-                    cacheOptions
-                    loadOptions={debounce(loadClientOptions, 300)} // Use your existing debounce
-                    defaultOptions // Pre-load some if needed
-                    placeholder="Search clients..."
-                    isClearable
-                    value={
-                      contract.client_id && contract.client_name ? {
-                        value: contract.client_id,
-                        label: `${contract.client_name} (${contract.dedicated_number || ''})`
-                      } : null
-                    }
-                    onChange={(selected) => {
-                      setContract(prev => ({
-                        ...prev,
-                        client_id: selected ? selected.value : '',
-                        // Also update the name and number in state for consistency
-                        client_name: selected ? selected.label.split(' (')[0] : '',
-                        dedicated_number: selected ? selected.label.match(/\(([^)]+)\)/)?.[1] || '' : ''
-                      }));
-                    }}
-                  />
+                  <div className="input-group">
+                    <AsyncSelect
+                      cacheOptions
+                      loadOptions={debounce(loadClientOptions, 300)} // Use your existing debounce
+                      defaultOptions // Pre-load some if needed
+                      placeholder="Search clients..."
+                      isClearable
+                      className="flex-grow-1"
+                      value={
+                        contract.client_id && contract.client_name ? {
+                          value: contract.client_id,
+                          label: `${contract.client_name} (${contract.dedicated_number || ''})`
+                        } : null
+                      }
+                      onChange={(selected) => {
+                        setContract(prev => ({
+                          ...prev,
+                          client_id: selected ? selected.value : '',
+                          // Also update the name and number in state for consistency
+                          client_name: selected ? selected.label.split(' (')[0] : '',
+                          dedicated_number: selected ? selected.label.match(/\(([^)]+)\)/)?.[1] || '' : ''
+                        }));
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => setModalConfig({ show: true, type: 'client' })}
+                    >
+                      + New
+                    </button>
+                  </div>
                 </div>
                 <div className="form-group">
                   <label>Start Date<span className="text-danger">*</span></label>
@@ -760,26 +826,39 @@ function ContractForm({ token, defaultType = 'new' }) {
               <div className="col-md-6">
                 <div className="form-group">
                   <label htmlFor="project_id">Project (Optional)</label>
-                  <AsyncSelect
-                    cacheOptions
-                    loadOptions={debounce(loadProjectOptions, 300)}
-                    defaultOptions
-                    placeholder="Search projects..."
-                    isClearable
-                    value={
-                      contract.project_id && contract.project_name ? {
-                        value: contract.project_id,
-                        label: contract.project_name
-                      } : null
-                    }//for edit
-                    onChange={(selected) => {
-                      setContract(prev => ({
-                        ...prev,
-                        project_id: selected ? selected.value : null,
-                        project_name: selected ? selected.label : ''
-                      }));
-                    }}
-                  />
+                  <div className="input-group">
+                    <AsyncSelect
+                      cacheOptions
+                      loadOptions={debounce(loadProjectOptions, 300)}
+                      defaultOptions
+                      placeholder="Search projects..."
+                      isClearable
+                      className="flex-grow-1"
+                      isDisabled={!contract.client_id} // Disable if no client is selected
+                      value={
+                        contract.project_id && contract.project_name ? {
+                          value: contract.project_id,
+                          label: contract.project_name
+                        } : null
+                      }//for edit
+                      onChange={(selected) => {
+                        setContract(prev => ({
+                          ...prev,
+                          project_id: selected ? selected.value : null,
+                          project_name: selected ? selected.label : ''
+                        }));
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => setModalConfig({ show: true, type: 'project' })}
+                      disabled={!contract.client_id} // Disable if no client is selected
+                    >
+                      + New
+                    </button>
+                  </div>
+                  {!contract.client_id && <div className="form-text">Please select a client before adding a project.</div>}
                 </div>
                 <div className="form-group">
                   <label>Location</label>
@@ -883,6 +962,31 @@ function ContractForm({ token, defaultType = 'new' }) {
         <button type="submit" className="btn btn-primary" disabled={loading}>
           {loading ? 'Saving...' : contractType === 'edit' ? 'Update' : 'Save'}
         </button>
+
+        {/* --- NEW: Render the modal conditionally at the end of your form --- */}
+        {modalConfig.show && (
+          <CreationModal
+            show={modalConfig.show}
+            onClose={handleModalClose}
+            onSave={handleModalSave}
+            title={modalConfig.type === 'client' ? 'Create New Client' : 'Create New Project'}
+            fields={
+              modalConfig.type === 'client'
+                ? [
+                    { name: 'client_name', label: 'Client Name', required: true },
+                    { name: 'email', label: 'Email (Optional)', type: 'email' },
+                  ]
+                : [
+                    { name: 'project_name', label: 'Project Name', required: true },
+                  ]
+            }
+            warningText={
+              modalConfig.type === 'client'
+                ? "Please ensure this client does not already exist. Check for abbreviations or variations (e.g., 'ABC Ltd.' vs. 'ABC Limited')."
+                : "Please ensure this project does not already exist for the selected client."
+            }
+          />
+        )}
       </form>
     </div>
   );
