@@ -16,25 +16,18 @@ function Dashboard({ token }) {
       setLoading(true);
       try {
         const [clientsRes, contractsRes] = await Promise.all([
-          axios.get('http://localhost:3000/api/clients', {
-            headers: { Authorization: `Bearer ${token}` },
-            params: { limit: 1000 } // High limit to fetch all
-          }),
-          axios.get('http://localhost:3000/api/contracts', {
-            headers: { Authorization: `Bearer ${token}` },
-            params: { limit: 1000 }
-          })
+          axios.get('http://localhost:3000/api/clients', { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get('http://localhost:3000/api/contracts', { headers: { Authorization: `Bearer ${token}` } })
         ]);
-        const expiring = contractsRes.data.data.filter(c => {
-          const endDate = new Date(c.end_date);
-          const threeMonthsFromNow = new Date();
-          threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
-          return endDate <= threeMonthsFromNow && endDate >= new Date();
-        }).length;
+        const expiringRes = await axios.get('http://localhost:3000/api/contracts', {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { status: 'expiring_soon' }
+        });
+
         setStats({
           clients: clientsRes.data.total,
           contracts: contractsRes.data.total,
-          expiring
+          expiring: expiringRes.data.total
         });
       } catch (err) {
         setError(err.response?.data?.error || 'Failed to fetch stats');
@@ -98,7 +91,7 @@ function Dashboard({ token }) {
             <div className="card-body">
               <h5 className="card-title">Expiring Soon</h5>
               <p className="card-text display-4">{stats.expiring}</p>
-              <Link to="/contracts" className="btn btn-warning">Check Expiring</Link>
+              <Link to="/contracts?status=expiring_soon" className="btn btn-primary">Check Expiring Soon</Link>
             </div>
           </div>
         </div>

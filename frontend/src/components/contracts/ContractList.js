@@ -22,6 +22,7 @@ function ContractList({ token }) {
   const history = useHistory();
   const searchParams = new URLSearchParams(location.search);
   const projectId = searchParams.get('project_id');
+  const status = searchParams.get('status');
 
   // Define all columns with groups for organized filtering
   // Groups (PIC and SLA) help categorize related columns for user convenience
@@ -58,6 +59,13 @@ function ContractList({ token }) {
 
   const { visibleColumns, toggleColumn, resetColumns, order, reorderColumns } = useColumnFilter(columns, 'contract_columns');
 
+  const statusColors = {
+    'Active': 'bg-success',
+    'Expiring Soon': 'bg-warning',
+    'Expired': 'bg-danger',
+    'Pending': 'bg-secondary'
+  };
+
   const fetchContracts = useCallback(
     debounce(async (searchTerm, page) => {
       if (!token) return;
@@ -66,6 +74,9 @@ function ContractList({ token }) {
         const params = { search: searchTerm, page, limit: itemsPerPage };
         if (projectId) {
           params.project_id = projectId;
+        }
+        if (status) {
+          params.status = status;
         }
         const response = await axios.get('http://localhost:3000/api/contracts', {
           headers: { Authorization: `Bearer ${token}` },
@@ -87,7 +98,7 @@ function ContractList({ token }) {
         setLoading(false);
       }
     }, 300),
-    [token, projectId]
+    [token, projectId, status]
   );
 
   useEffect(() => {
@@ -301,10 +312,7 @@ function ContractList({ token }) {
                             {['start_date', 'end_date', 'created_at'].includes(key) ? (
                               contract[key] ? new Date(contract[key]).toISOString().split('T')[0] : '-'
                             ) : key === 'contract_status' ? (
-                              <span
-                                className={`badge bg-${contract.contract_status === 'New' ? 'success' : 'primary'}`}
-                                style={{ fontSize: '1rem', padding: '0.4em 0.8em' }}
-                              >
+                              <span className={`badge ${statusColors[contract.contract_status] || 'bg-light text-dark'}`}>
                                 {contract.contract_status || '-'}
                               </span>
                             ) : key === 'project_name' ? (

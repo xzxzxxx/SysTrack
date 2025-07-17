@@ -60,12 +60,18 @@ const generateContractCode = async (category, client_id) => {
 // Calculate contract status based on start_date and end_date
 const calculateContractStatus = (start_date, end_date) => {
   const today = new Date();
+  today.setHours(0, 0, 0, 0); // Normalize today's date to the beginning of the day
   const start = new Date(start_date);
   const end = new Date(end_date);
+  const threeMonthsFromNow = new Date();
+  threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
+
   if (today < start) {
     return 'Pending';
   } else if (today > end) {
     return 'Expired';
+  } else if (end <= threeMonthsFromNow) {
+    return 'Expiring Soon';
   } else {
     return 'Active';
   }
@@ -91,7 +97,7 @@ const validateContractDates = (start_date, end_date) => {
 
 // Get all contracts with search and pagination
 router.get('/', async (req, res) => {
-  const { search, contract_name, jobnote, page = 1, limit = 50, project_id } = req.query;
+  const { search, contract_name, jobnote, page = 1, limit = 50, project_id, status } = req.query;
   const offset = (page - 1) * limit;
   let query = `
     SELECT c.*, p.project_name 
@@ -107,6 +113,7 @@ router.get('/', async (req, res) => {
     conditions.push('c.contract_id::text ILIKE $1 OR c.client_code ILIKE $1 OR c.contract_name ILIKE $1');
     values.push(`%${search}%`);
   }
+  
   //Search when create renew contracts
   if (contract_name) {
     conditions.push('c.contract_name ILIKE $' + (values.length + 1));
@@ -119,6 +126,12 @@ router.get('/', async (req, res) => {
   if (project_id) {
     conditions.push('c.project_id = $' + (values.length + 1));
     values.push(project_id);
+  }
+
+  //Search when filter by status
+  if (status === 'expiring_soon') {
+    // Add a condition to find contracts ending within the next 3 months but not yet expired.
+    conditions.push(`c.end_date BETWEEN NOW() AND NOW() + INTERVAL '3 months'`);
   }
 
   if (conditions.length > 0) {

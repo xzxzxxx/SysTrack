@@ -1,5 +1,3 @@
-// In frontend/src/components/common/CreationModal.js
-
 import React, { useState, useEffect } from 'react';
 
 const CreationModal = ({ show, onClose, onSave, title, fields, warningText }) => {
