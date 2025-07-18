@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
-import EmailPreviewModal from './EmailPreviewModal'; // We will create this next
+import EmailPreviewModal from './EmailPreviewModal';
 
 const NotificationReview = ({ token }) => {
   const [contracts, setContracts] = useState([]);
@@ -56,6 +56,7 @@ const NotificationReview = ({ token }) => {
   const handleSendNotice = () => {
     // We will implement the actual email sending logic here later
     alert(`This will send an email for ${selectedIds.size} contracts.`);
+    setIsPreviewModalOpen(false);
   };
 
   if (isLoading) {
@@ -86,11 +87,8 @@ const NotificationReview = ({ token }) => {
             </label>
           </div>
           <div>
-            <button className="btn btn-outline-secondary me-2" onClick={() => setIsPreviewModalOpen(true)}>
+            <button className="btn btn-outline-primary me-2" onClick={() => setIsPreviewModalOpen(true)}>
               Preview Email
-            </button>
-            <button className="btn btn-primary" onClick={handleSendNotice} disabled={selectedIds.size === 0}>
-              Send Notice to Sales Team
             </button>
           </div>
         </div>
@@ -139,6 +137,7 @@ const NotificationReview = ({ token }) => {
         show={isPreviewModalOpen}
         onClose={() => setIsPreviewModalOpen(false)}
         contracts={selectedContracts}
+        onSend={handleSendNotice}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 import React from 'react';
 
-const EmailPreviewModal = ({ show, onClose, contracts }) => {
+const EmailPreviewModal = ({ show, onClose, contracts, onSend }) => {
   if (!show) {
     return null;
   }
@@ -45,7 +45,6 @@ const EmailPreviewModal = ({ show, onClose, contracts }) => {
               <table className="table table-bordered table-sm">
                 <thead>
                   <tr>
-                    {/* --- MODIFICATION: Dynamically generate table headers --- */}
                     {columns.map(col => (
                       <th key={col.key}>{col.label}</th>
                     ))}
@@ -54,7 +53,6 @@ const EmailPreviewModal = ({ show, onClose, contracts }) => {
                 <tbody>
                   {contracts.map(c => (
                     <tr key={c.contract_id}>
-                      {/* --- MODIFICATION: Dynamically generate table cells in the correct order --- */}
                       {columns.map(col => {
                         let cellData = c[col.key] || '-';
                         if (col.key === 'start_date' || col.key === 'end_date') {
@@ -67,16 +65,21 @@ const EmailPreviewModal = ({ show, onClose, contracts }) => {
                 </tbody>
               </table>
             </div>
-
-            {/* --- NEW: Add the closing signature --- */}
             <div className="mt-4">
               <p>Best regards,</p>
               <p>XXX</p>
             </div>
 
           </div>
-          <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>Close</button>
+          <div className="modal-footer d-flex justify-content-between">
+            {/* Left button */}
+            <button type="button" className="btn btn-secondary" onClick={onClose}>
+              Cancel
+            </button>
+            {/* Right button */}
+            <button type="button" className="btn btn-primary" onClick={onSend}>
+              Send Notice to Sales Team
+            </button>
           </div>
         </div>
       </div>
