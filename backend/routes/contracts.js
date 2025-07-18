@@ -162,6 +162,36 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET all contracts that are expiring soon for the notification review page
+router.get('/expiring-for-notice', async (req, res) => {
+  try {
+    const query = `
+      SELECT
+        c.*, -- Select all columns from the contracts table
+        cl.client_name,
+        p.project_name
+      FROM contracts c
+      LEFT JOIN clients cl ON c.client_id = cl.client_id
+      LEFT JOIN projects p ON c.project_id = p.project_id
+      WHERE c.end_date BETWEEN NOW() AND NOW() + INTERVAL '3 months'
+      ORDER BY c.end_date ASC
+    `;
+    const result = await pool.query(query);
+
+    // Calculate status for each contract before sending
+    // in the future we will add a status call renewed
+    const contractsWithStatus = result.rows.map(contract => ({
+      ...contract,
+      contract_status: 'Expiring Soon' // We know this from the WHERE clause
+    }));
+
+    res.json(contractsWithStatus);
+  } catch (err) {
+    console.error(err.stack);
+    res.status(500).json({ error: 'Server error while fetching expiring contracts' });
+  }
+});
+
 // Get a single contract by contract_id
 router.get('/:contract_id', async (req, res) => {
   const { contract_id } = req.params;

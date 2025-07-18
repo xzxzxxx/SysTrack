@@ -92,6 +92,7 @@ function Dashboard({ token }) {
               <h5 className="card-title">Expiring Soon</h5>
               <p className="card-text display-4">{stats.expiring}</p>
               <Link to="/contracts?status=expiring_soon" className="btn btn-primary">Check Expiring Soon</Link>
+              <Link to="/contracts/notify" className="btn btn-light">Notify Team</Link>
             </div>
           </div>
         </div>

@@ -447,18 +447,18 @@ function ContractForm({ token, defaultType = 'new' }) {
     }
   };
 
-  // --- NEW: State to manage the modal ---
+  // State to manage the modal
   const [modalConfig, setModalConfig] = useState({
     show: false,
     type: null, // will be 'client' or 'project'
   });
 
-  // --- NEW: Handler to close the modal ---
+  // Handler to close the modal
   const handleModalClose = () => {
     setModalConfig({ show: false, type: null });
   };
 
-  // --- NEW: Handler to save data from the modal ---
+  // Handler to save data from the modal
   const handleModalSave = async (newData) => {
     const { type } = modalConfig;
     const token = localStorage.getItem('token'); // or however you get your token
@@ -963,7 +963,7 @@ function ContractForm({ token, defaultType = 'new' }) {
           {loading ? 'Saving...' : contractType === 'edit' ? 'Update' : 'Save'}
         </button>
 
-        {/* --- NEW: Render the modal conditionally at the end of your form --- */}
+        {/* Render the modal conditionally*/}
         {modalConfig.show && (
           <CreationModal
             show={modalConfig.show}
