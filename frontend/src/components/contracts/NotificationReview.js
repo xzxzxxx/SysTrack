@@ -7,6 +7,7 @@ const NotificationReview = ({ token }) => {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
     const fetchExpiringContracts = async () => {
@@ -53,10 +54,28 @@ const NotificationReview = ({ token }) => {
     return contracts.filter(c => selectedIds.has(c.contract_id));
   }, [contracts, selectedIds]);
 
-  const handleSendNotice = () => {
-    // We will implement the actual email sending logic here later
-    alert(`This will send an email for ${selectedIds.size} contracts.`);
-    setIsPreviewModalOpen(false);
+  const handleSendNotice = async () => {
+    setIsSending(true);
+    try {
+      await axios.post(
+        'http://localhost:3000/api/notifications/send-renewal-email',
+        {
+          contractIds: Array.from(selectedIds) // Convert the Set to an Array for JSON
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      // Replace with your toast system
+      alert('Notification sent successfully!');
+    } catch (error) {
+      console.error("Failed to send notification", error);
+      // Replace with your toast system
+      alert(`Error: ${error.response?.data?.error || 'Could not send the email.'}`);
+    } finally {
+      setIsSending(false);
+      setIsPreviewModalOpen(false); // Close the modal
+    }
   };
 
   if (isLoading) {
@@ -138,6 +157,7 @@ const NotificationReview = ({ token }) => {
         onClose={() => setIsPreviewModalOpen(false)}
         contracts={selectedContracts}
         onSend={handleSendNotice}
+        isSending={isSending} // Pass the state down
       />
     </div>
   );

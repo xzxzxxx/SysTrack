@@ -1,6 +1,6 @@
 import React from 'react';
 
-const EmailPreviewModal = ({ show, onClose, contracts, onSend }) => {
+const EmailPreviewModal = ({ show, onClose, contracts, onSend, isSending }) => {
   if (!show) {
     return null;
   }
@@ -73,12 +73,12 @@ const EmailPreviewModal = ({ show, onClose, contracts, onSend }) => {
           </div>
           <div className="modal-footer d-flex justify-content-between">
             {/* Left button */}
-            <button type="button" className="btn btn-secondary" onClick={onClose}>
+            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isSending}>
               Cancel
             </button>
             {/* Right button */}
-            <button type="button" className="btn btn-primary" onClick={onSend}>
-              Send Notice to Sales Team
+            <button type="button" className="btn btn-primary" onClick={onSend} disabled={isSending}>
+            {isSending ? 'Sending...' : 'Send Notice to Sales Team'}
             </button>
           </div>
         </div>

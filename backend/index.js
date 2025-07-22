@@ -9,6 +9,7 @@ const clientRoutes = require('./routes/clients');
 const contractRoutes = require('./routes/contracts');
 const userRoutes = require('./routes/users');
 const projectRoutes = require('./routes/projects');
+const notificationsRouter = require('./routes/notifications');
 
 const app = express();
 const port = 3000;
@@ -37,6 +38,7 @@ app.use('/api/clients', verifyToken, clientRoutes);
 app.use('/api/contracts', verifyToken, contractRoutes);
 app.use('/api/users', verifyToken, userRoutes);
 app.use('/api/projects', verifyToken, projectRoutes);
+app.use('/api/notifications', notificationsRouter);
 
 // Start server
 app.listen(port, () => {
