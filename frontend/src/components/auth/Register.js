@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import api from '../../utils/api';
-import { useHistory } from 'react-router-dom';
+import { useHistory, Link } from 'react-router-dom';
 
 function Register() {
   const [username, setUsername] = useState('');
@@ -51,8 +51,12 @@ function Register() {
           <option value="sales">Sales</option>
           <option value="ae">AE</option>
         </select>
-        <button type="submit">Register</button>
+        <button type="submit" className="btn btn-primary w-100">Register</button>
       </form>
+      {error && <div className="alert alert-danger mt-3">{error}</div>}
+      <div className="text-center mt-3">
+        <p>Already have an account? <Link to="/login">Login here</Link></p>
+      </div>
     </div>
   );
 }

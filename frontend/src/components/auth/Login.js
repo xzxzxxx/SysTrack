@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import api from '../../utils/api';
-import { useHistory } from 'react-router-dom';
+import { useHistory, Link } from 'react-router-dom';
 
 function Login({ setToken }) {
   const [email, setEmail] = useState('');
@@ -40,8 +40,12 @@ function Login({ setToken }) {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        <button type="submit">Login</button>
+        <button type="submit" className="btn btn-primary w-100">Login</button>
       </form>
+      {error && <div className="alert alert-danger mt-3">{error}</div>}
+      <div className="text-center mt-3">
+        <p>Don't have an account? <Link to="/register">Register here</Link></p>
+      </div>
     </div>
   );
 }

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { jwtDecode } from 'jwt-decode';
 import { BrowserRouter as Router, Route, Switch, Redirect } from 'react-router-dom';
 import Layout from './components/common/DefaultLayout';
 import Login from './components/auth/Login';
@@ -18,11 +19,18 @@ const PrivateRoute = ({ children, token, logout, ...rest }) => {
       {...rest}
       render={({ location }) =>
         token ? (
+          // If the user is logged in, render the main Layout and the page content
           <Layout token={token} logout={logout}>
             {children}
           </Layout>
         ) : (
-          <Redirect to={{ pathname: '/login', state: { from: location } }} />
+          // If not logged in, redirect them to the login page
+          <Redirect
+            to={{
+              pathname: '/login',
+              state: { from: location } // This saves the page they were trying to access
+            }}
+          />
         )
       }
     />
@@ -37,10 +45,31 @@ function App() {
     localStorage.removeItem('token');
   };
 
+  // Add this useEffect hook to validate the token on initial load
+  useEffect(() => {
+    const storedToken = localStorage.getItem('token');
+    if (storedToken) {
+      try {
+        const decodedToken = jwtDecode(storedToken);
+        const currentTime = Date.now() / 1000; // Get current time in seconds
+
+        // If the token's expiration time is in the past, log the user out
+        if (decodedToken.exp < currentTime) {
+          console.log('Token has expired, logging out.');
+          logout();
+        }
+      } catch (error) {
+        // If the token is malformed or invalid, log the user out
+        console.error('Invalid token found in storage.', error);
+        logout();
+      }
+    }
+  }, []); // The empty dependency array ensures this runs only once on mount
+
   return (
     <Router>
       <Switch>
-        {/* Public routes that don't need the main layout */}
+        {/* Public routes - they do NOT use the PrivateRoute or Layout */}
         <Route path="/login">
           <Login setToken={setToken} />
         </Route>
@@ -48,7 +77,7 @@ function App() {
           <Register />
         </Route>
 
-        {/* --- All Authenticated Routes Go Here --- */}
+        {/* Private routes - they are all protected by PrivateRoute */}
         <PrivateRoute path="/dashboard" token={token} logout={logout}>
           <Dashboard token={token} />
         </PrivateRoute>

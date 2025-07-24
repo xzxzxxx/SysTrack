@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Navbar from './navbar/Navbar';
 import './DefaultLayout.css';
 
-function Layout({ token, logout, children, layoutType = 'sidebar' }) {
+function Layout({ token, logout, children }) {
   const [isOpen, setIsOpen] = useState(true);
 
   // --- Inactivity Timeout Logic ---
@@ -66,9 +66,7 @@ function Layout({ token, logout, children, layoutType = 'sidebar' }) {
 
   return (
     <div className="layout-container">
-      {layoutType === 'sidebar' && (
-        <Navbar isOpen={isOpen} setIsOpen={setIsOpen} logout={logout}  token={token}/>
-      )}
+      <Navbar isOpen={isOpen} setIsOpen={setIsOpen} logout={logout} token={token} />
       <main className={`main-content ${isOpen ? 'open' : 'closed'}`}>
         {children}
       </main>

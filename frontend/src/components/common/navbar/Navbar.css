@@ -132,3 +132,9 @@
 .main-content.closed {
   margin-left: 0;
 }
+
+.btn-black {
+  background-color: black;
+  color: white;
+  border: none;
+}
