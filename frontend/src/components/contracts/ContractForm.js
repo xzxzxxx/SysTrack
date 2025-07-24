@@ -29,9 +29,10 @@ function ContractForm({ token, defaultType = 'new' }) {
     report: '',
     other: '',
     remarks: '',
-    period: '',
-    response_time: '',
-    service_time: '',
+    // Pre-fill these values only when creating a new contract
+    period: defaultType === 'new' ? '8*5' : '',
+    response_time: defaultType === 'new' ? '4hrs' : '',
+    service_time: defaultType === 'new' ? 'NBD' : '',
     spare_parts_provider: '',
     project_id: null
   });
@@ -356,7 +357,10 @@ function ContractForm({ token, defaultType = 'new' }) {
       start_date: 'Start Date',
       end_date: 'End Date',
       jobnote: 'Job Note',
-      category: 'Category'
+      category: 'Category',
+      period: 'Period',
+      response_time: 'Response Time',
+      service_time: 'Service Time',
     };
     const missingFields = Object.keys(requiredFields).filter(field => !contract[field]);
     console.log('Missing fields:', missingFields); // Debug missing fields
@@ -927,9 +931,9 @@ function ContractForm({ token, defaultType = 'new' }) {
           <div className="card-body">
             <div className="row">
               <div className="col-md-6">
-                {renderRadioGroup('period', 'Period', ['8*5', '24*5'])}
-                {renderRadioGroup('response_time', 'Response Time', ['4hrs', '8hrs'])}
-                {renderRadioGroup('service_time', 'Service Time', ['NBD', '48hrs'])}
+                {renderRadioGroup('period', <>Period<span className="text-danger">*</span></>, ['8*5', '24*5'])}
+                {renderRadioGroup('response_time', <>Response Time<span className="text-danger">*</span></>, ['4hrs', '8hrs'])}
+                {renderRadioGroup('service_time', <>Service Time<span className="text-danger">*</span></>, ['NBD', '48hrs'])}
               </div>
               <div className="col-md-6">
                 {renderRadioGroup('spare_parts_provider', 'Spare Parts Provider', ['cwc', 'client'])}
