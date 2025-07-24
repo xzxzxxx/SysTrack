@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import { useHistory } from 'react-router-dom';
 
 function Register() {
@@ -13,7 +13,7 @@ function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:3000/api/auth/register', { username, email, password, role });
+      await api.post('/auth/register', { username, email, password, role });
       history.push('/login');
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed');

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import { useHistory } from 'react-router-dom';
 
 function Login({ setToken }) {
@@ -11,7 +11,7 @@ function Login({ setToken }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:3000/api/auth/login', { email, password });
+      const response = await api.post('/auth/login', { email, password });
       const { token } = response.data;
       setToken(token);
       localStorage.setItem('token', token);

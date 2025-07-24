@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import { useHistory, useParams } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import Select from 'react-select';
@@ -77,10 +77,7 @@ function ContractForm({ token, defaultType = 'new' }) {
       try {
         // Build query parameters for search
         const params = { contract_name: inputValue || undefined, jobnote: jobnoteSearch || undefined };
-        const response = await axios.get('http://localhost:3000/api/contracts', {
-          headers: { Authorization: `Bearer ${token}` },
-          params
-        });
+        const response = await api.get('/contracts', { params });
         // Map API response to react-select format: { value, label, contract }
         const options = response.data.data.map(contract => ({
           value: contract.contract_id,
@@ -105,8 +102,7 @@ function ContractForm({ token, defaultType = 'new' }) {
       return;
     }
     try {
-      const response = await axios.get('http://localhost:3000/api/contracts', {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get('/contracts', {
         params: { jobnote: jobnoteSearch }
       });
       if (response.data.data.length === 0) {
@@ -160,9 +156,7 @@ function ContractForm({ token, defaultType = 'new' }) {
     const fetchClients = async () => {
       setLoading(true);
       try {
-        const response = await axios.get('http://localhost:3000/api/clients', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await api.get('/clients');
         setClients(response.data.data || []);
       } catch (err) {
         setError(err.response?.data?.error || 'Failed to fetch clients');
@@ -175,9 +169,8 @@ function ContractForm({ token, defaultType = 'new' }) {
     const fetchProjects = async () => {
       setLoading(true);
       try {
-        const response = await axios.get('http://localhost:3000/api/projects', {
-          headers: { Authorization: `Bearer ${token}` },
-          params: { page: 1, limit: 1000 } // Fetch all projects with high limit
+        const response = await api.get('/projects', {
+          params: { page: 1, limit: 1000 }
         });
         setProjects(response.data.data); // Expects { data: [{ project_id, project_name }, ...] }
       } catch (err) {
@@ -194,9 +187,7 @@ function ContractForm({ token, defaultType = 'new' }) {
       setContractType('edit');
       setLoading(true);
       try {
-        const response = await axios.get(`http://localhost:3000/api/contracts/${contract_id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await api.get(`/contracts/${contract_id}`);
         const contractData = response.data;
         console.log('Fetched contract data:', contractData); // Debug API response
         // Format dates to YYYY-MM-DD for <input type="date">
@@ -254,39 +245,39 @@ function ContractForm({ token, defaultType = 'new' }) {
   }, [contract_id, token]);
 
   // Load clients async with search
-  const loadClientOptions = (inputValue, callback) => {
+  const loadClientOptions = async (inputValue, callback) => {
     if (!inputValue) return callback([]);
-    axios.get('http://localhost:3000/api/clients', {
-      headers: { Authorization: `Bearer ${token}` },
-      params: { search: inputValue, limit: 50 }
-    }).then(response => {
+    try {
+      const response = await api.get('/clients', {
+        params: { search: inputValue, limit: 50 }
+      });
       const options = response.data.data.map(client => ({
         value: client.client_id,
         label: `${client.client_name} (${client.dedicated_number})`
       }));
       callback(options);
-    }).catch(err => {
+    } catch (err) {
       setToast({ show: true, message: 'Failed to load clients', type: 'danger' });
       callback([]);
-    });
+    }
   };
 
   // Load projects async with search
-  const loadProjectOptions = (inputValue, callback) => {
+  const loadProjectOptions = async (inputValue, callback) => {
     if (!inputValue) return callback([]);
-    axios.get('http://localhost:3000/api/projects', {
-      headers: { Authorization: `Bearer ${token}` },
-      params: { search: inputValue, limit: 50 }
-    }).then(response => {
+    try {
+      const response = await api.get('/projects', {
+        params: { search: inputValue, limit: 50 }
+      });
       const options = response.data.data.map(project => ({
         value: project.project_id,
         label: project.project_name
       }));
       callback(options);
-    }).catch(err => {
+    } catch (err) {
       setToast({ show: true, message: 'Failed to load projects', type: 'danger' });
       callback([]);
-    });
+    }
   };
   
   // Trigger contract_name search when typing in renew mode
@@ -421,15 +412,10 @@ function ContractForm({ token, defaultType = 'new' }) {
     try {
       if (contractType === 'edit') {
         // Update existing contract
-        await axios.put(`http://localhost:3000/api/contracts/${contract_id}`, contract, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await api.put(`/contracts/${contract_id}`, contract);
         setToast({ show: true, message: 'Contract updated successfully', type: 'success' });
       } else {
-        // Create new contract (new or renew mode)
-        await axios.post('http://localhost:3000/api/contracts', contract, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await api.post('/contracts', contract);
         setToast({ show: true, message: 'Contract created successfully', type: 'success' });
       }
       // Redirect to contracts list after success
@@ -461,14 +447,10 @@ function ContractForm({ token, defaultType = 'new' }) {
   // Handler to save data from the modal
   const handleModalSave = async (newData) => {
     const { type } = modalConfig;
-    const token = localStorage.getItem('token'); // or however you get your token
-    
     try {
       if (type === 'client') {
         // API call to create a new client
-        const response = await axios.post('http://localhost:3000/api/clients', newData, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await api.post('/clients', newData);
         const newClient = response.data;
         // Update the contract form state with the new client's details
         setContract(prev => ({
@@ -479,12 +461,9 @@ function ContractForm({ token, defaultType = 'new' }) {
         }));
       } else if (type === 'project') {
         // API call to create a new project
-        const response = await axios.post('http://localhost:3000/api/projects', {
+        const response = await api.post('/projects', {
           ...newData,
           client_id: contract.client_id, // Important: pass the currently selected client_id
-          user_id: 1 // Replace with the actual logged-in user's ID
-        }, {
-          headers: { Authorization: `Bearer ${token}` }
         });
         const newProject = response.data;
         // Update the contract form state with the new project's details

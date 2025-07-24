@@ -67,7 +67,7 @@ function Layout({ token, logout, children, layoutType = 'sidebar' }) {
   return (
     <div className="layout-container">
       {layoutType === 'sidebar' && (
-        <Navbar isOpen={isOpen} setIsOpen={setIsOpen} logout={logout} />
+        <Navbar isOpen={isOpen} setIsOpen={setIsOpen} logout={logout}  token={token}/>
       )}
       <main className={`main-content ${isOpen ? 'open' : 'closed'}`}>
         {children}

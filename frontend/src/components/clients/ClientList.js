@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import { Link } from 'react-router-dom';
 import debounce from 'lodash.debounce';
 import SearchBar from '../common/SearchBar';
@@ -33,9 +33,14 @@ function ClientList({ token }) {
       if (!token) return;
       setLoading(true);
       try {
-        const response = await axios.get('http://localhost:3000/api/clients', {
-          headers: { Authorization: `Bearer ${token}` },
-          params: { search: searchTerm, sortBy: sortByVal, sortOrder: sortOrderVal, page, limit: itemsPerPage }
+        const response = await api.get('/clients', {
+          params: { 
+            search: searchTerm, 
+            sortBy: sortByVal, 
+            sortOrder: sortOrderVal, 
+            page, 
+            limit: itemsPerPage 
+          }
         });
         setClients(response.data.data);
         setTotalItems(response.data.total);
@@ -59,9 +64,7 @@ function ClientList({ token }) {
     if (window.confirm('Are you sure you want to delete this client?')) {
       setLoading(true);
       try {
-        await axios.delete(`http://localhost:3000/api/clients/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await api.delete(`/clients/${id}`);
         setClients(clients.filter(client => client.client_id !== id));
         setTotalItems(prev => prev - 1);
         setToast({ show: true, message: 'Client deleted successfully', type: 'success' });

@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
+const cookieParser = require('cookie-parser');
 const verifyToken = require('./middleware/auth');
 const authRoutes = require('./routes/auth');
 const clientRoutes = require('./routes/clients');
@@ -15,7 +16,10 @@ const app = express();
 const port = 3000;
 
 // Middleware
-app.use(cors({ origin: 'http://localhost:3001' })); // Allow frontend
+app.use(cors({
+  origin: 'http://localhost:3001', // Your frontend URL
+  exposedHeaders: ['X-Refreshed-Token'], // Allow this header to be read by the client
+}));
 app.use(express.json());
 
 // Database connection

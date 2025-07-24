@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import EmailPreviewModal from './EmailPreviewModal';
 
 const NotificationReview = ({ token }) => {
@@ -12,9 +12,7 @@ const NotificationReview = ({ token }) => {
   useEffect(() => {
     const fetchExpiringContracts = async () => {
       try {
-        const response = await axios.get('http://localhost:3000/api/contracts/expiring-for-notice', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await api.get('/contracts/expiring-for-notice');
         setContracts(response.data);
 
         // Pre-select contracts that have not been renewed
@@ -57,15 +55,9 @@ const NotificationReview = ({ token }) => {
   const handleSendNotice = async () => {
     setIsSending(true);
     try {
-      await axios.post(
-        'http://localhost:3000/api/notifications/send-renewal-email',
-        {
-          contractIds: Array.from(selectedIds) // Convert the Set to an Array for JSON
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
+      await api.post('/notifications/send-renewal-email', {
+        contractIds: Array.from(selectedIds)
+      });
       // Replace with your toast system
       alert('Notification sent successfully!');
     } catch (error) {

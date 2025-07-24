@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import { Link, useLocation, useHistory } from 'react-router-dom';
 import debounce from 'lodash.debounce';
 import SearchBar from '../common/SearchBar';
@@ -78,10 +78,7 @@ function ContractList({ token }) {
         if (status) {
           params.status = status;
         }
-        const response = await axios.get('http://localhost:3000/api/contracts', {
-          headers: { Authorization: `Bearer ${token}` },
-          params
-        });
+        const response = await api.get('/contracts', { params });
         const data = response.data.data;
         if (projectId && data.length === 0) {
           setShowNoContractsPopup(true);
@@ -98,7 +95,7 @@ function ContractList({ token }) {
         setLoading(false);
       }
     }, 300),
-    [token, projectId, status]
+    [projectId, status]
   );
 
   useEffect(() => {
@@ -109,9 +106,7 @@ function ContractList({ token }) {
     if (window.confirm('Are you sure you want to delete this contract?')) {
       setLoading(true);
       try {
-        await axios.delete(`http://localhost:3000/api/contracts/${contract_id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await api.delete(`/contracts/${contract_id}`);
         setContracts(contracts.filter(contract => contract.contract_id !== contract_id));
         setTotalItems(prev => prev - 1);
         setToast({ show: true, message: 'Contract deleted successfully', type: 'success' });

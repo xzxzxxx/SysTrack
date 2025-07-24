@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import { useHistory, useParams } from 'react-router-dom';
 
 function ClientForm({ token }) {
@@ -12,9 +12,7 @@ function ClientForm({ token }) {
     if (id && token) {
       const fetchClient = async () => {
         try {
-          const response = await axios.get(`http://localhost:3000/api/clients/${id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          const response = await api.get(`/clients/${id}`);
           setClient(response.data);
         } catch (err) {
           setError(err.response?.data?.error || 'Failed to fetch client');
@@ -33,13 +31,9 @@ function ClientForm({ token }) {
     e.preventDefault();
     try {
       if (id) {
-        await axios.put(`http://localhost:3000/api/clients/${id}`, client, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await api.put(`/clients/${id}`, client);
       } else {
-        await axios.post('http://localhost:3000/api/clients', client, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await api.post('/clients', client);
       }
       history.push('/clients');
     } catch (err) {

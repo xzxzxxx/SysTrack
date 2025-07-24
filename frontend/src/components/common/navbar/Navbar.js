@@ -1,9 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './Navbar.css';
 
 function Navbar({ token, logout, isOpen, setIsOpen }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  // Add debug log to check token
+  useEffect(() => {
+    console.log('Current token state:', token);
+  }, [token]);
 
   return (
     <>
@@ -27,7 +32,8 @@ function Navbar({ token, logout, isOpen, setIsOpen }) {
           <li className="nav-item">
             <Link className="nav-link" to="/">Dashboard</Link>
           </li>
-          {token ? (
+          {/* Check if token exists and is not null/undefined */}
+          {token && token !== 'null' && token !== 'undefined' ? (
             <>
               <li className="nav-item">
                 <Link className="nav-link" to="/clients">Clients</Link>
@@ -52,7 +58,7 @@ function Navbar({ token, logout, isOpen, setIsOpen }) {
         </ul>
         <div className="sidebar-footer">
           <div className="user-placeholder">
-            {token && (
+            {token && token !== 'null' && token !== 'undefined' && (
               <button
                 className="users-icon btn"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
