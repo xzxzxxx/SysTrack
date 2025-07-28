@@ -39,7 +39,7 @@ const generateContractCode = async (category, client_id) => {
     'SELECT COUNT(*) FROM Contracts WHERE client_id = $1',
     [client_id]
   );
-  const no_of_orders = parseInt(contractResult.rows[0].count) + 1; // Add 1 for current contract
+  const no_of_orders = (contractResult.rows[0] ? parseInt(contractResult.rows[0].count, 10) : 0) + 1; // Add 1 for current contract
   
   // Generate code
   const client_code = `${mappedCategory}${year}${dedicated_number}${String(no_of_orders).padStart(2, '0')}`;
