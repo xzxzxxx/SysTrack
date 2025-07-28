@@ -162,7 +162,7 @@ function ContractList({ token }) {
           <SearchBar
             value={search}
             onChange={handleSearch}
-            placeholder="Search by contract ID, client code, or contract name"
+            placeholder="Search by Contract Name, Client, Job Note, or Location..."
             isSearching={loading}
             className="w-100 mb-2"
           />

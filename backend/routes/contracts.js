@@ -100,17 +100,23 @@ router.get('/', async (req, res) => {
   const { search, contract_name, jobnote, page = 1, limit = 50, project_id, status } = req.query;
   const offset = (page - 1) * limit;
   let query = `
-    SELECT c.*, p.project_name 
+    SELECT c.*, p.project_name, cl.client_name
     FROM Contracts c 
-    LEFT JOIN projects p ON c.project_id = p.project_id`;
-  let countQuery = 'SELECT COUNT(*) FROM Contracts c';
+    LEFT JOIN projects p ON c.project_id = p.project_id
+    LEFT JOIN clients cl ON c.client_id = cl.client_id`;
+
+  let countQuery = 'SELECT COUNT(*) FROM Contracts c LEFT JOIN clients cl ON c.client_id = cl.client_id';
   const values = [];
-  let whereClause = '';
+  const conditions = [];
 
   // Apply filters
-  const conditions = [];
   if (search) {
-    conditions.push('c.contract_id::text ILIKE $1 OR c.client_code ILIKE $1 OR c.contract_name ILIKE $1');
+    conditions.push(`(
+      c.contract_name ILIKE $1 OR 
+      cl.client_name ILIKE $1 OR 
+      c.jobnote ILIKE $1 OR 
+      c.location ILIKE $1
+    )`);
     values.push(`%${search}%`);
   }
   
@@ -135,11 +141,12 @@ router.get('/', async (req, res) => {
   }
 
   if (conditions.length > 0) {
-    whereClause = ' WHERE ' + conditions.join(' AND ');
+    const whereClause = ' WHERE ' + conditions.join(' AND ');
+    query += whereClause;
+    countQuery += whereClause;
   }
 
-  query += whereClause + ' LIMIT $' + (values.length + 1) + ' OFFSET $' + (values.length + 2);
-  countQuery += whereClause;
+  query += ' ORDER BY c.contract_id DESC LIMIT $' + (values.length + 1) + ' OFFSET $' + (values.length + 2);
   values.push(limit, offset);
 
   try {
