@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import { Link } from 'react-router-dom';
 
 function Dashboard({ token }) {
@@ -16,11 +16,10 @@ function Dashboard({ token }) {
       setLoading(true);
       try {
         const [clientsRes, contractsRes] = await Promise.all([
-          axios.get('http://localhost:3000/api/clients', { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get('http://localhost:3000/api/contracts', { headers: { Authorization: `Bearer ${token}` } })
+          api.get('/clients'),
+          api.get('/contracts')
         ]);
-        const expiringRes = await axios.get('http://localhost:3000/api/contracts', {
-          headers: { Authorization: `Bearer ${token}` },
+        const expiringRes = await api.get('/contracts', {
           params: { status: 'expiring_soon' }
         });
 

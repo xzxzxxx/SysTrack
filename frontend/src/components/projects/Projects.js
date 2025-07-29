@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import { Link } from 'react-router-dom';
 
 // Component to display a paginated list of projects
@@ -15,8 +15,7 @@ function Projects({ token }) {
   useEffect(() => {
     if (!token) return;
     setLoading(true);
-    axios.get('http://localhost:3000/api/projects', {
-      headers: { Authorization: `Bearer ${token}` },
+    api.get('/projects', {
       params: { page, limit } // Send pagination parameters
     })
       .then(response => {
