@@ -29,15 +29,16 @@ The application features automated code generation, advanced search and filterin
 
 ## Tech Stack
 
--   **Frontend**: React.js, React Router, Bootstrap, Axios, `react-select`, `lodash.debounce`
+-   **Frontend**: React.js, React Router, Bootstrap, Axios, `react-select`, `jwt-decode`, `lodash.debounce`
 -   **Backend**: Node.js, Express.js, PostgreSQL, `pg` (node-postgres)
 -   **Authentication**: `jsonwebtoken`, `bcrypt`
 -   **Email**: `nodemailer`
 -   **Testing**: `jest`, `supertest`
+-   **Deployment**: Nginx (as reverse proxy), PM2 (as process manager)
 
 ## Setup Instructions
 
-Follow these steps to set up and run the project on a local machine.
+Follow these steps to set up and run the project on a local machine for development.
 
 ### Prerequisites
 
@@ -68,18 +69,18 @@ First, set up the Node.js server and connect it to the database.
         ```
     -   Run your database schema script (`db-setup.sql` or similar) to create the necessary tables.
 
-4.  **Create the Environment File (`.env`):**
+4.  **Create the Backend Environment File (`.env`):**
     -   Create a file named `.env` in the `backend` directory.
     -   Add the following variables, replacing the placeholder values with your actual credentials.
 
     ```
-    # Database
+    # Database Connection
     DATABASE_URL=postgresql://systrack_user:your_secure_password@localhost:5432/systrack_dev
 
-    # JWT
+    # JWT Secret Key
     JWT_SECRET=a_very_strong_and_random_secret_key_for_jwt
 
-    # Email Notifications
+    # Email Notification Credentials (using a Gmail App Password is recommended)
     EMAIL_USER=your-dedicated-app-email@gmail.com
     EMAIL_PASS=your-16-digit-gmail-app-password
     RECIPIENT_EMAIL=email_address_to_receive_notifications@example.com
@@ -105,7 +106,18 @@ Next, set up the React client.
     npm install
     ```
 
-3.  **Start the Frontend Development Server:**
+3.  **Create the Frontend Environment File (`.env`):**
+    -   This step is crucial for defining where the frontend should send its API requests.
+    -   Create a file named `.env` in the `frontend` directory.
+    -   Add the following variable. For local development, it should point to your local backend server.
+
+    ```
+    # The URL for the backend API. React requires the 'REACT_APP_' prefix.
+    REACT_APP_API_URL=http://localhost:3000/api
+    ```
+    *Note: When deploying to a VM, you would change this URL to the server's public address, e.g., `http://192.168.1.100/api`.*
+
+4.  **Start the Frontend Development Server:**
     ```
     npm start
     ```
@@ -113,7 +125,7 @@ Next, set up the React client.
 
 ## Running Tests
 
-Unit and integration tests for the backend are located in the `backend` directory.
+Unit and integration tests for the backend are located in the `backend` directory and can be run using Jest.
 
 1.  **Navigate to the backend directory:**
     ```
