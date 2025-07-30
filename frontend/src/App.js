@@ -66,6 +66,21 @@ function App() {
     }
   }, []); // The empty dependency array ensures this runs only once on mount
 
+  useEffect(() => {
+    const handleTokenUpdate = () => {
+      console.log('Token update event received. Updating state.');
+      setToken(localStorage.getItem('token') || '');
+    };
+
+    // Listen for the custom event dispatched from the API interceptor
+    window.addEventListener('token-updated', handleTokenUpdate);
+
+    // Cleanup: remove the event listener when the component unmounts
+    return () => {
+      window.removeEventListener('token-updated', handleTokenUpdate);
+    };
+  }, []); // Empty dependency array means this runs once on mount
+
   return (
     <Router>
       <Switch>

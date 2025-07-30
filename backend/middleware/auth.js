@@ -19,7 +19,7 @@ const verifyToken = (req, res, next) => {
 
     // Refresh if the token has less than half its lifetime remaining
     // (e.g., for a 1-hour token, refresh if less than 30 minutes are left)
-    if (timeRemaining < tokenLifetime / 2) {
+    if (timeRemaining < tokenLifetime / 2 && timeRemaining > 0) {
       // Create a new payload without the old 'iat' and 'exp' fields
       const newPayload = {
         userId: decoded.userId,

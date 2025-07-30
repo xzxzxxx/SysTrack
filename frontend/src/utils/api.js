@@ -28,8 +28,10 @@ api.interceptors.response.use(
     // Check for our custom token refresh header
     const newToken = response.headers['x-refreshed-token'];
     if (newToken) {
+      console.log('Token refreshed successfully');
       // Silently update the token in localStorage
       localStorage.setItem('token', newToken);
+      window.dispatchEvent(new Event('token-updated'));
     }
     return response;
   },
