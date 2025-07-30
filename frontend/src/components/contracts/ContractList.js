@@ -249,7 +249,7 @@ function ContractList({ token }) {
           {error && !loading && !toast.show && <div className="alert alert-danger">{error}</div>}
           {contracts.length === 0 && !loading && !showNoContractsPopup && <p>No contracts found.</p>}
           {contracts.length > 0 && (
-            <div className="table-responsive">
+            <div className="table">
               <table className="table table-striped">
                 <DragDropContext onDragEnd={onDragEnd}>
                   <thead>
