@@ -32,7 +32,7 @@ function Login({ setToken }) {
         <div className="col-md-6 col-12 d-flex align-items-center">
           <div className="w-100 p-4 login-card shadow-lg">
             <h2 className="mb-4 text-center">Welcome Back!</h2>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
               <div className="mb-3">
                 <label htmlFor="email" className="form-label">Email address</label>
                 <input type="email" 

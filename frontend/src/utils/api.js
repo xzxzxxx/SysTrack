@@ -37,9 +37,13 @@ api.interceptors.response.use(
     // If we get a 401 error, it means the token is invalid/expired
     // and the user should be logged out.
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem('token');
-      // Force a reload to the login page
-      window.location.href = '/login';
+      const isLoginRequest = error.config?.url?.includes('/auth/login');
+      if (!isLoginRequest) {
+        // Only proceed with logout/redirect if NOT on login
+        localStorage.removeItem('token');
+        // Force a reload to the login page
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
