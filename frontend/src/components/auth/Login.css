@@ -1,0 +1,17 @@
+/* Enhances the visual appeal and ensures modern look */
+.login-bg {
+    background: linear-gradient(99deg, #f3f4f8 0%, #e3e9f5 100%);
+  }
+  .login-image {
+    /* background: url('/branding/login-illustration.svg') no-repeat center;*/
+    background-size: contain;
+  }
+  .login-card {
+    border-radius: 1rem;
+    background: #fff;
+  }
+  @media (max-width: 767.98px) {
+    .login-image { display: none !important; }
+    .login-card { margin-top: 32px; }
+  }
+  
