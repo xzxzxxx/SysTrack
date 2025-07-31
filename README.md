@@ -80,6 +80,9 @@ First, set up the Node.js server and connect it to the database.
     # JWT Secret Key
     JWT_SECRET=a_very_strong_and_random_secret_key_for_jwt
 
+    # --- Frontend URL for CORS ---
+    CLIENT_URL=<http://localhost:3001>
+
     # Email Notification Credentials (using a Gmail App Password is recommended)
     EMAIL_USER=your-dedicated-app-email@gmail.com
     EMAIL_PASS=your-16-digit-gmail-app-password
