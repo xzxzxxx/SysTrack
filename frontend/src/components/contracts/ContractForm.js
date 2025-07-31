@@ -468,6 +468,7 @@ function ContractForm({ token, defaultType = 'new' }) {
         const response = await api.post('/projects', {
           ...newData,
           client_id: contract.client_id, // Important: pass the currently selected client_id
+          user_id: contract.user_id
         });
         const newProject = response.data;
         // Update the contract form state with the new project's details

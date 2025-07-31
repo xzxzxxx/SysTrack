@@ -1,32 +1,61 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../utils/api';
 import { Link } from 'react-router-dom';
+import SearchBar from '../common/SearchBar';
+import debounce from 'lodash.debounce';
 
 // Component to display a paginated list of projects
 function Projects({ token }) {
   const [projects, setProjects] = useState([]); // List of projects for current page
   const [error, setError] = useState(''); // Error message for API failures
-  const [loading, setLoading] = useState(false); // Loading state for API calls
+  const [initialLoading, setInitialLoading] = useState(true);
   const [page, setPage] = useState(1); // Current page number
   const [limit] = useState(10); // Number of projects per page
   const [total, setTotal] = useState(0); // Total number of projects
+  const [search, setSearch] = useState('');
+  
 
-  // Fetch projects when token, page, or limit changes
-  useEffect(() => {
-    if (!token) return;
-    setLoading(true);
-    api.get('/projects', {
-      params: { page, limit } // Send pagination parameters
-    })
-      .then(response => {
-        setProjects(response.data.data); // Set projects from response.data.data
-        setTotal(response.data.total); // Set total count
-      })
-      .catch(err => {
+  // This is the same pattern used in ContractList.js
+  const fetchProjects = useCallback(
+    debounce(async (searchTerm, pageNum, isInitialLoad) => {
+      if (isInitialLoad) {
+        setInitialLoading(true);
+      }
+      try {
+        const response = await api.get('/projects', {
+          params: {
+            page: pageNum,
+            limit,
+            search: searchTerm,
+          },
+        });
+        setProjects(response.data.data);
+        setTotal(response.data.total);
+        setError(''); // Clear previous errors on a successful search
+      } catch (err) {
         setError(err.response?.data?.error || 'Failed to fetch projects');
-      })
-      .finally(() => setLoading(false));
-  }, [token, page, limit]);
+      } finally {
+        if (isInitialLoad) {
+          setInitialLoading(false);
+        }
+      }
+    }, 500), // 500ms delay after the user stops typing
+    [token, limit] // Dependencies for useCallback
+  );
+
+  // This useEffect now calls our new debounced function
+  useEffect(() => {
+    fetchProjects(search, page, true);
+  }, [page, fetchProjects]);
+
+  // It does NOT set the loading state, providing a smoother experience.
+  useEffect(() => {
+    // We check if it's not the initial state to avoid a double fetch on mount
+    if (!initialLoading) {
+      fetchProjects(search, 1); // Always reset to page 1 on search
+    }
+  }, [search, fetchProjects, initialLoading]);
+
 
   // Calculate total pages
   const totalPages = Math.ceil(total / limit);
@@ -38,8 +67,13 @@ function Projects({ token }) {
     }
   };
 
+  const handleSearchChange = (newSearchTerm) => {
+    // Only update the search term. The useEffect will handle the rest.
+    setSearch(newSearchTerm);
+  };
+
   // Show loading spinner or error message if applicable
-  if (loading) return <div className="spinner-border" role="status"><span className="sr-only">Loading...</span></div>;
+  if (initialLoading) return <div>Loading...</div>;
   if (error) return <div className="alert alert-danger">{error}</div>;
 
   return (
@@ -49,6 +83,12 @@ function Projects({ token }) {
           <h2 className="my-4">Projects</h2>
         </div>
       </div>
+      <SearchBar
+        value={search}
+        onChange={handleSearchChange}
+        placeholder="Search by project name or client..."
+      />
+      {error && <div className="alert alert-danger mt-3">{error}</div>}
       {projects.length === 0 ? (
         <p>No projects found.</p>
       ) : (

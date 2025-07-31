@@ -13,25 +13,23 @@ router.get('/', async (req, res) => {
   let query = `
     SELECT p.project_id, p.project_name, p.created_at,
            c.client_name, u.username,
-           json_agg(c2.*) AS contracts
+           (SELECT json_agg(c2.*) FROM contracts c2 WHERE c2.project_id = p.project_id) AS contracts
     FROM projects p
     LEFT JOIN clients c ON p.client_id = c.client_id
     LEFT JOIN users u ON p.user_id = u.user_id
-    LEFT JOIN contracts c2 ON c2.project_id = p.project_id
   `;
-  let countQuery = 'SELECT COUNT(*) AS total FROM projects p';
+  let countQuery = 'SELECT COUNT(*) AS total FROM projects p LEFT JOIN clients c ON p.client_id = c.client_id';
   const values = [];
   let whereClause = '';
 
   if (search) {
-    whereClause = ' WHERE p.project_name ILIKE $1';
+    whereClause = ' WHERE (p.project_name ILIKE $1 OR c.client_name ILIKE $1)';
     values.push(`%${search}%`);
   }
 
-  query += `${whereClause} GROUP BY p.project_id, p.project_name, p.created_at, c.client_name, u.username
-    ORDER BY p.project_id LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
+  // Append clauses and pagination to the queries
+  query += `${whereClause} GROUP BY p.project_id, c.client_name, u.username ORDER BY p.project_id DESC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
   countQuery += whereClause;
-
   values.push(limit, offset);
 
   try {
@@ -45,7 +43,7 @@ router.get('/', async (req, res) => {
     });
   } catch (err) {
     console.error(err.stack);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error while fetching projects' });
   }
 });
 

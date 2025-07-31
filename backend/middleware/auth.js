@@ -19,7 +19,7 @@ const verifyToken = (req, res, next) => {
 
     // Refresh if the token has less than half its lifetime remaining
     // (e.g., for a 1-hour token, refresh if less than 30 minutes are left)
-    if (timeRemaining < tokenLifetime / 2 && timeRemaining > 0) {
+    if (timeRemaining < tokenLifetime / 8 && timeRemaining > 0) {
       // Create a new payload without the old 'iat' and 'exp' fields
       const newPayload = {
         userId: decoded.userId,
@@ -27,7 +27,7 @@ const verifyToken = (req, res, next) => {
         // Add any other user data you originally put in the token
       };
 
-      const newToken = jwt.sign(newPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
+      const newToken = jwt.sign(newPayload, process.env.JWT_SECRET, { expiresIn: '4h' });
       
       // Send the new token back in a custom header
       res.setHeader('X-Refreshed-Token', newToken);
