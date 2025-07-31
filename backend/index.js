@@ -12,13 +12,15 @@ const userRoutes = require('./routes/users');
 const projectRoutes = require('./routes/projects');
 const notificationsRouter = require('./routes/notifications');
 const { verify } = require('jsonwebtoken');
+const helmet = require('helmet');
 
 const app = express();
 const port = 3000;
 
 // Middleware
+app.use(helmet());
 app.use(cors({
-  origin: 'http://localhost:3001', // Your frontend URL
+  origin: process.env.CLIENT_URL || 'http://localhost:3001', // Your frontend URL
   exposedHeaders: ['X-Refreshed-Token'], // Allow this header to be read by the client
 }));
 app.use(express.json());
