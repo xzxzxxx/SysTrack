@@ -57,7 +57,6 @@ function ContractForm({ token, defaultType = 'new' }) {
 
   // State for dropdown data and UI feedback
   const [clients, setClients] = useState([]); // List of clients from /api/clients
-  const [projects, setProjects] = useState([]); // List of projects from /api/projects
   const [error, setError] = useState(''); // Error message for API failures
   const [loading, setLoading] = useState(false); // Loading state for API calls
   const [toast, setToast] = useState({ show: false, message: '', type: '' }); // Toast for success/error messages
@@ -166,22 +165,6 @@ function ContractForm({ token, defaultType = 'new' }) {
       }
     };
 
-    // Fetch projects for the dropdown
-    const fetchProjects = async () => {
-      setLoading(true);
-      try {
-        const response = await api.get('/projects', {
-          params: { page: 1, limit: 1000 }
-        });
-        setProjects(response.data.data); // Expects { data: [{ project_id, project_name }, ...] }
-      } catch (err) {
-        console.error('Failed to fetch projects: Please ensure /api/projects endpoint is implemented', err);
-        setError(err.response?.data?.error || 'Failed to fetch projects');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     // Fetch contract data for edit mode
     const fetchContract = async () => {
       if (!contract_id) return;
@@ -241,7 +224,6 @@ function ContractForm({ token, defaultType = 'new' }) {
     };
 
     fetchClients();
-    fetchProjects();
     fetchContract();
   }, [contract_id, token]);
 
@@ -267,10 +249,10 @@ function ContractForm({ token, defaultType = 'new' }) {
   const loadProjectOptions = async (inputValue, callback) => {
     if (!inputValue) return callback([]);
     try {
-      const response = await api.get('/projects', {
-        params: { search: inputValue, limit: 50 }
+      const response = await api.get('/projects/lookup', {
+        params: { search: inputValue }
       });
-      const options = response.data.data.map(project => ({
+      const options = response.data.map(project => ({
         value: project.project_id,
         label: project.project_name
       }));
@@ -314,11 +296,14 @@ function ContractForm({ token, defaultType = 'new' }) {
     }
   };
 
-  // Handle project dropdown changes
-  const handleProjectChange = (e) => {
-    const value = e.target.value === '' ? null : parseInt(e.target.value);
-    setContract(prev => ({ ...prev, project_id: value }));
-  };
+  const handleProjectChange = (selectedOption) => {
+    // selectedOption will be an object { value: project_id, label: project_name } or null
+    setContract(prev => ({
+      ...prev,
+      project_id: selectedOption ? selectedOption.value : null,
+      project_name: selectedOption ? selectedOption.label : '',
+    }));
+  }
 
   // Handle selection from contract_name autocomplete
   const handleContractSelect = (option) => {
@@ -812,26 +797,24 @@ function ContractForm({ token, defaultType = 'new' }) {
                   <label htmlFor="project_id">Project (Optional)</label>
                   <div className="input-group">
                     <AsyncSelect
+                      id="project_id"
+                      className="flex-grow-1"
+                      classNamePrefix="select"
                       cacheOptions
                       loadOptions={debounce(loadProjectOptions, 300)}
                       defaultOptions
                       placeholder="Search projects..."
                       isClearable
-                      className="flex-grow-1"
-                      isDisabled={!contract.client_id} // Disable if no client is selected
+                      isDisabled={!contract.client_id} // Disable if no client is selected//for edit
+                      onChange={handleProjectChange}
+                      // This is the key to making Edit mode work correctly.
+                      // It creates the { value, label } object that AsyncSelect needs.
                       value={
-                        contract.project_id && contract.project_name ? {
-                          value: contract.project_id,
-                          label: contract.project_name
+                        contract.project_id ? { 
+                          value: contract.project_id, 
+                          label: contract.project_name || `Project ${contract.project_id}` 
                         } : null
-                      }//for edit
-                      onChange={(selected) => {
-                        setContract(prev => ({
-                          ...prev,
-                          project_id: selected ? selected.value : null,
-                          project_name: selected ? selected.label : ''
-                        }));
-                      }}
+                      }
                     />
                     <button
                       type="button"

@@ -99,7 +99,7 @@ function Projects({ token }) {
                 <div>
                   <h5 className="mb-0">{project.project_name}</h5>
                   <div className="text-muted small">
-                    ID: {project.project_id} | Client: {project.client_name || '-'} | User: {project.username || '-'} | Date: {new Date(project.created_at).toISOString().split('T')[0]}
+                    ID: {project.project_id} | Client: {project.client_name || '-'} | User: {project.username || '-'} | Date: {new Date(project.created_at).toISOString().split('T')[0]} | Total : {project.contract_count || '-' }
                   </div>
                 </div>
                 <Link
