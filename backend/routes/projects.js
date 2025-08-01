@@ -33,7 +33,7 @@ router.get('/', async (req, res) => {
   }
 
   // Append clauses and pagination to the queries
-  query += `${whereClause} GROUP BY p.project_id, c.client_name, u.username ORDER BY p.project_id DESC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
+  query += `${whereClause} GROUP BY p.project_id, p.project_name, p.created_at, c.client_name, u.username ORDER BY p.project_id DESC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
   countQuery += whereClause;
   values.push(limit, offset);
 
