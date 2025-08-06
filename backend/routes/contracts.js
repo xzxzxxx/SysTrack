@@ -104,7 +104,6 @@ router.get('/', async (req, res) => {
     FROM Contracts c 
     LEFT JOIN projects p ON c.project_id = p.project_id
     LEFT JOIN clients cl ON c.client_id = cl.client_id`;
-
   let countQuery = 'SELECT COUNT(*) FROM Contracts c LEFT JOIN clients cl ON c.client_id = cl.client_id';
   const values = [];
   const conditions = [];

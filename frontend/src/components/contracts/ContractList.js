@@ -33,7 +33,7 @@ function ContractList({ token }) {
     { key: 'renew_code', label: 'Renew Code' },
     { key: 'start_date', label: 'Start Date' },
     { key: 'end_date', label: 'End Date' },
-    { key: 'client', label: 'Client' },
+    { key: 'client_name', label: 'Client' },
     { key: 'alias', label: 'Alias' },
     { key: 'jobnote', label: 'Job Note' },
     { key: 'sales', label: 'Sales' },
@@ -57,7 +57,7 @@ function ContractList({ token }) {
     { key: 'project_name', label: 'Project Name' },
   ];
 
-  const { visibleColumns, toggleColumn, resetColumns, order, reorderColumns } = useColumnFilter(columns, 'contract_columns');
+  const { visibleColumns, toggleColumn, resetColumns, order, reorderColumns } = useColumnFilter(columns, 'contract_columns_v2');
 
   const statusColors = {
     'Active': 'bg-success',
@@ -80,6 +80,7 @@ function ContractList({ token }) {
         }
         const response = await api.get('/contracts', { params });
         const data = response.data.data;
+        console.log('Fetched contracts:', data);
         if (projectId && data.length === 0) {
           setShowNoContractsPopup(true);
         } else {
