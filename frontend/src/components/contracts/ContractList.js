@@ -5,6 +5,7 @@ import debounce from 'lodash.debounce';
 import SearchBar from '../common/SearchBar';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import useColumnFilter from '../../utils/useColumnFilter';
+import './ContractList.css';
 
 // Component to display and manage a list of contracts
 function ContractList({ token }) {
@@ -22,7 +23,10 @@ function ContractList({ token }) {
   const history = useHistory();
   const searchParams = new URLSearchParams(location.search);
   const projectId = searchParams.get('project_id');
-  const status = searchParams.get('status');
+
+  // statuses filter
+  const [selectedStatuses, setSelectedStatuses] = useState(['Active']);
+  const statusOptions = ['Active', 'Pending', 'Expiring Soon', 'Expired'];
 
   // Define all columns with groups for organized filtering
   // Groups (PIC and SLA) help categorize related columns for user convenience
@@ -67,7 +71,7 @@ function ContractList({ token }) {
   };
 
   const fetchContracts = useCallback(
-    debounce(async (searchTerm, page) => {
+    debounce(async (searchTerm, page, statuses) => {
       if (!token) return;
       setLoading(true);
       try {
@@ -75,12 +79,13 @@ function ContractList({ token }) {
         if (projectId) {
           params.project_id = projectId;
         }
-        if (status) {
-          params.status = status;
+        if (statuses.length > 0) {
+          // Join the array into a comma-separated string, e.g., "Active,Expired"
+          params.statuses = statuses.join(','); 
         }
+
         const response = await api.get('/contracts', { params });
         const data = response.data.data;
-        console.log('Fetched contracts:', data);
         if (projectId && data.length === 0) {
           setShowNoContractsPopup(true);
         } else {
@@ -96,12 +101,12 @@ function ContractList({ token }) {
         setLoading(false);
       }
     }, 300),
-    [projectId, status]
+    [token, projectId]
   );
 
   useEffect(() => {
-    fetchContracts(search, currentPage);
-  }, [search, currentPage, fetchContracts]);
+    fetchContracts(search, currentPage, selectedStatuses);
+  }, [search, currentPage, fetchContracts, selectedStatuses]);
 
   const handleDelete = async (contract_id) => {
     if (window.confirm('Are you sure you want to delete this contract?')) {
@@ -135,6 +140,21 @@ function ContractList({ token }) {
   const handleReturnToContracts = () => {
     setShowNoContractsPopup(false);
     history.push('/contracts');
+  };
+
+  const handleStatusToggle = (statusToToggle) => {
+    // Logic to add or remove status from the selected list
+    setSelectedStatuses(prevStatuses => {
+      if (prevStatuses.includes(statusToToggle)) {
+        // If status is already selected, remove it
+        return prevStatuses.filter(status => status !== statusToToggle);
+      } else {
+        // Otherwise, add it
+        return [...prevStatuses, statusToToggle];
+      }
+    });
+    // Reset to page 1 when filter changes
+    setCurrentPage(1);
   };
 
   // Handle drag-and-drop reordering of column headers
@@ -249,6 +269,19 @@ function ContractList({ token }) {
           )}
           {error && !loading && !toast.show && <div className="alert alert-danger">{error}</div>}
           {contracts.length === 0 && !loading && !showNoContractsPopup && <p>No contracts found.</p>}
+          {/* START: New Status Filter Bar */}
+          <div className="status-filter-bar mb-3">
+            {statusOptions.map(status => (
+              <button
+                key={status}
+                onClick={() => handleStatusToggle(status)}
+                className={`status-filter-item ${selectedStatuses.includes(status) ? 'active' : ''}`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+          {/* END: New Status Filter Bar */}
           {contracts.length > 0 && (
             <div className="table">
               <table className="table table-striped">

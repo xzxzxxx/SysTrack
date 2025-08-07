@@ -96,75 +96,105 @@ const validateContractDates = (start_date, end_date) => {
 };
 
 // Get all contracts with search and pagination
+// GET all contracts with enhanced search, filtering, and pagination
 router.get('/', async (req, res) => {
-  const { search, contract_name, jobnote, page = 1, limit = 50, project_id, status } = req.query;
+  // Destructure all possible query parameters
+  const { search, page = 1, limit = 50, project_id, statuses } = req.query;
   const offset = (page - 1) * limit;
-  let query = `
-    SELECT c.*, p.project_name, cl.client_name
-    FROM Contracts c 
+
+  // Base query with all necessary joins
+  let baseQuery = `
+    FROM Contracts c
     LEFT JOIN projects p ON c.project_id = p.project_id
-    LEFT JOIN clients cl ON c.client_id = cl.client_id`;
-  let countQuery = 'SELECT COUNT(*) FROM Contracts c LEFT JOIN clients cl ON c.client_id = cl.client_id';
+    LEFT JOIN clients cl ON c.client_id = cl.client_id
+  `;
+
+  // Use parameterized queries to prevent SQL injection
   const values = [];
   const conditions = [];
 
-  // Apply filters
+  // --- Dynamically build WHERE conditions ---
+
+  // 1. Handle search term
   if (search) {
-    conditions.push(`(
-      c.contract_name ILIKE $1 OR 
-      cl.client_name ILIKE $1 OR 
-      c.jobnote ILIKE $1 OR 
-      c.location ILIKE $1
-    )`);
     values.push(`%${search}%`);
+    conditions.push(`(
+      c.contract_name ILIKE $${values.length} OR
+      cl.client_name ILIKE $${values.length} OR
+      c.jobnote ILIKE $${values.length} OR
+      c.location ILIKE $${values.length}
+    )`);
   }
-  
-  //Search when create renew contracts
-  if (contract_name) {
-    conditions.push('c.contract_name ILIKE $' + (values.length + 1));
-    values.push(`%${contract_name}%`);
-  }
-  if (jobnote) {
-    conditions.push('LOWER(c.jobnote) = LOWER($' + (values.length + 1) + ')');
-    values.push(jobnote);
-  }
+
+  // 2. Handle project_id filter
   if (project_id) {
-    conditions.push('c.project_id = $' + (values.length + 1));
     values.push(project_id);
+    conditions.push(`c.project_id = $${values.length}`);
   }
 
-  //Search when filter by status
-  if (status === 'expiring_soon') {
-    // Add a condition to find contracts ending within the next 3 months but not yet expired.
-    conditions.push(`c.end_date BETWEEN NOW() AND NOW() + INTERVAL '3 months'`);
+  // 3. Handle statuses filter
+  if (statuses) {
+    // Frontend sends statuses as a comma-separated string, e.g., "Active,Expired"
+    const statusArray = statuses.split(',');
+    values.push(statusArray);
+
+    // This CASE statement replicates the logic of `calculateContractStatus` directly in SQL
+    conditions.push(`
+      (CASE
+        WHEN NOW() < c.start_date THEN 'Pending'
+        WHEN NOW() > c.end_date THEN 'Expired'
+        WHEN c.end_date <= (NOW() + INTERVAL '3 months') THEN 'Expiring Soon'
+        ELSE 'Active'
+      END) = ANY($${values.length})
+    `);
   }
 
+  // --- Assemble the final query ---
+
+  let whereClause = '';
   if (conditions.length > 0) {
-    const whereClause = ' WHERE ' + conditions.join(' AND ');
-    query += whereClause;
-    countQuery += whereClause;
+    whereClause = ' WHERE ' + conditions.join(' AND ');
   }
 
-  query += ' ORDER BY c.contract_id DESC LIMIT $' + (values.length + 1) + ' OFFSET $' + (values.length + 2);
-  values.push(limit, offset);
+  // Query to get the filtered data
+  let dataQuery = `
+    SELECT c.*, p.project_name, cl.client_name,
+      (CASE
+        WHEN NOW() < c.start_date THEN 'Pending'
+        WHEN NOW() > c.end_date THEN 'Expired'
+        WHEN c.end_date <= (NOW() + INTERVAL '3 months') THEN 'Expiring Soon'
+        ELSE 'Active'
+      END) as contract_status
+    ${baseQuery}
+    ${whereClause}
+    ORDER BY c.contract_id DESC
+    LIMIT $${values.length + 1}
+    OFFSET $${values.length + 2}
+  `;
+
+  // Query to get the total count of filtered items for pagination
+  let countQuery = `SELECT COUNT(*) ${baseQuery} ${whereClause}`;
 
   try {
+    // Prepare values for data query (with limit and offset)
+    const dataValues = [...values, limit, offset];
+    // Prepare values for count query (without limit and offset)
+    const countValues = [...values];
+
+    // Execute both queries in parallel for better performance
     const [dataResult, countResult] = await Promise.all([
-      pool.query(query, values),
-      pool.query(countQuery, values.slice(0, values.length - 2))
+      pool.query(dataQuery, dataValues),
+      pool.query(countQuery, countValues)
     ]);
-    // Add contract_status dynamically
-    const contracts = dataResult.rows.map(contract => ({
-      ...contract,
-      contract_status: calculateContractStatus(contract.start_date, contract.end_date)
-    }));
+
     res.json({
-      data: contracts,
-      total: parseInt(countResult.rows[0].count)
+      data: dataResult.rows,
+      total: parseInt(countResult.rows[0].count, 10)
     });
+
   } catch (err) {
-    console.error(err.stack);
-    res.status(500).json({ error: 'Server error' });
+    console.error('Error executing contract query:', err.stack);
+    res.status(500).json({ error: 'Server error while fetching contracts' });
   }
 });
 
