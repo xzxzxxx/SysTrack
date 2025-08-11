@@ -95,93 +95,129 @@ const validateContractDates = (start_date, end_date) => {
   return null; // No errors
 };
 
+// Whitelist of allowed column keys and their corresponding DB columns
+const allowedSortColumns = {
+  'contract_id': 'c.contract_id',
+  'start_date': 'c.start_date',
+  'end_date': 'c.end_date',
+  'created_at': 'c.created_at',
+  'contract_name': 'c.contract_name',
+  'client_name': 'cl.client_name',
+  'username': 'u.username',
+  'project_name': 'p.project_name',
+  'location': 'c.location',
+  'category': 'c.category'
+};
+
 // Get all contracts with search and pagination
 // GET all contracts with enhanced search, filtering, and pagination
 router.get('/', async (req, res) => {
-  // Destructure all possible query parameters
-  const { search, page = 1, limit = 50, project_id, statuses } = req.query;
-  const offset = (page - 1) * limit;
+  try{
+    // Destructure all possible query parameters
+    const { search, page = 1, limit = 50, project_id, statuses } = req.query;
+    const offset = (page - 1) * limit;
 
-  // Base query with all necessary joins
-  let baseQuery = `
-    FROM Contracts c
-    LEFT JOIN projects p ON c.project_id = p.project_id
-    LEFT JOIN clients cl ON c.client_id = cl.client_id
-  `;
+    // Base query with all necessary joins
+    let baseQuery = `
+      FROM Contracts c
+      LEFT JOIN projects p ON c.project_id = p.project_id
+      LEFT JOIN clients cl ON c.client_id = cl.client_id
+      LEFT JOIN Users u ON c.user_id = u.user_id
+    `;
 
-  // Use parameterized queries to prevent SQL injection
-  const values = [];
-  const conditions = [];
+    // Use parameterized queries to prevent SQL injection
+    const values = [];
+    const conditions = [];
 
-  // --- Dynamically build WHERE conditions ---
+    // --- Dynamically build WHERE conditions ---
 
-  // 1. Handle search term
-  if (search) {
-    values.push(`%${search}%`);
-    conditions.push(`(
-      c.contract_name ILIKE $${values.length} OR
-      cl.client_name ILIKE $${values.length} OR
-      c.jobnote ILIKE $${values.length} OR
-      c.location ILIKE $${values.length}
-    )`);
-  }
+    // 1. Handle search term
+    if (search) {
+      values.push(`%${search}%`);
+      conditions.push(`(
+        c.contract_name ILIKE $${values.length} OR
+        cl.client_name ILIKE $${values.length} OR
+        c.jobnote ILIKE $${values.length} OR
+        u.username ILIKE $${values.length} OR
+        c.location ILIKE $${values.length}
+      )`);
+    }
 
-  // 2. Handle project_id filter
-  if (project_id) {
-    values.push(project_id);
-    conditions.push(`c.project_id = $${values.length}`);
-  }
+    // 2. Handle project_id filter
+    if (project_id) {
+      values.push(project_id);
+      conditions.push(`c.project_id = $${values.length}`);
+    }
 
-  // 3. Handle statuses filter
-  if (statuses) {
-    // Frontend sends statuses as a comma-separated string, e.g., "Active,Expired"
-    const statusArray = statuses.split(',');
-    values.push(statusArray);
+    // 3. Handle statuses filter
+    if (statuses) {
+      // Frontend sends statuses as a comma-separated string, e.g., "Active,Expired"
+      const statusArray = statuses.split(',');
+      values.push(statusArray);
 
-    // This CASE statement replicates the logic of `calculateContractStatus` directly in SQL
-    conditions.push(`
-      (CASE
-        WHEN NOW() < c.start_date THEN 'Pending'
-        WHEN NOW() > c.end_date THEN 'Expired'
-        WHEN c.end_date <= (NOW() + INTERVAL '3 months') THEN 'Expiring Soon'
-        ELSE 'Active'
-      END) = ANY($${values.length})
-    `);
-  }
+      // This CASE statement replicates the logic of `calculateContractStatus` directly in SQL
+      conditions.push(`
+        (CASE
+          WHEN NOW() < c.start_date THEN 'Pending'
+          WHEN NOW() > c.end_date THEN 'Expired'
+          WHEN c.end_date <= (NOW() + INTERVAL '3 months') THEN 'Expiring Soon'
+          ELSE 'Active'
+        END) = ANY($${values.length})
+      `);
+    }
 
-  // --- Assemble the final query ---
+    let whereClause = '';
+    if (conditions.length > 0) {
+      whereClause = ' WHERE ' + conditions.join(' AND ');
+    }
 
-  let whereClause = '';
-  if (conditions.length > 0) {
-    whereClause = ' WHERE ' + conditions.join(' AND ');
-  }
+    //  Dynamic ORDER BY Clause 
+    const sortClauses = [];
+    // Loop up to 2, for max 2 sort conditions
+    for (let i = 1; i <= 2; i++) {
+      const sortBy = req.query[`sort_by_${i}`];
+      const sortDirInput = req.query[`sort_dir_${i}`];
+      const sortDir = sortDirInput ? sortDirInput.toLowerCase() : undefined;
+      const isAllowed = sortBy && allowedSortColumns[sortBy] && (sortDir === 'asc' || sortDir === 'desc');
 
-  // Query to get the filtered data
-  let dataQuery = `
-    SELECT c.*, p.project_name, cl.client_name,
-      (CASE
-        WHEN NOW() < c.start_date THEN 'Pending'
-        WHEN NOW() > c.end_date THEN 'Expired'
-        WHEN c.end_date <= (NOW() + INTERVAL '3 months') THEN 'Expiring Soon'
-        ELSE 'Active'
-      END) as contract_status
-    ${baseQuery}
-    ${whereClause}
-    ORDER BY c.contract_id DESC
-    LIMIT $${values.length + 1}
-    OFFSET $${values.length + 2}
-  `;
+      if (isAllowed) {
+        sortClauses.push(`${allowedSortColumns[sortBy]} ${sortDir.toUpperCase()}`);
+      }
+    }
 
-  // Query to get the total count of filtered items for pagination
-  let countQuery = `SELECT COUNT(*) ${baseQuery} ${whereClause}`;
+    let orderByClause = 'ORDER BY c.contract_id DESC'; // Default sort
+    if (sortClauses.length > 0) {
+      orderByClause = 'ORDER BY ' + sortClauses.join(', ');
+    }
 
-  try {
-    // Prepare values for data query (with limit and offset)
-    const dataValues = [...values, limit, offset];
-    // Prepare values for count query (without limit and offset)
-    const countValues = [...values];
+    // 1. For counting total items (no limit, offset, or sorting needed)
+    const countQuery = `SELECT COUNT(*) AS total_count ${baseQuery} ${whereClause}`;
+    const countValues = [...values]; // Values for the WHERE clause only
 
-    // Execute both queries in parallel for better performance
+    // 2. For fetching the actual page of data
+    // add limit and offset to the values array and use their index for placeholders
+    const dataValues = [...values];
+    dataValues.push(limit);
+    const limitPlaceholder = `$${dataValues.length}`;
+    dataValues.push(offset);
+    const offsetPlaceholder = `$${dataValues.length}`;
+
+    const dataQuery = `
+        SELECT c.*, p.project_name, cl.client_name, u.username,
+          (CASE
+            WHEN NOW() < c.start_date THEN 'Pending'
+            WHEN NOW() > c.end_date THEN 'Expired'
+            WHEN c.end_date <= (NOW() + INTERVAL '3 months') THEN 'Expiring Soon'
+            ELSE 'Active'
+          END) as contract_status
+        ${baseQuery}
+        ${whereClause}
+        ${orderByClause}
+        LIMIT ${limitPlaceholder}
+        OFFSET ${offsetPlaceholder}
+      `;
+
+      // --- Execute queries ---
     const [dataResult, countResult] = await Promise.all([
       pool.query(dataQuery, dataValues),
       pool.query(countQuery, countValues)
@@ -189,7 +225,7 @@ router.get('/', async (req, res) => {
 
     res.json({
       data: dataResult.rows,
-      total: parseInt(countResult.rows[0].count, 10)
+      total: parseInt(countResult.rows[0].total_count, 10)
     });
 
   } catch (err) {

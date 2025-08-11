@@ -56,7 +56,7 @@ function ContractList({ token }) {
     { key: 'preventive', label: 'Preventive', group: 'SLA' },
     { key: 'report', label: 'Report', group: 'SLA' },
     { key: 'other', label: 'Other', group: 'SLA' },
-    { key: 'user_id', label: 'User ID' },
+    { key: 'username', label: 'User' },
     { key: 'created_at', label: 'Created At' },
     { key: 'project_name', label: 'Project Name' },
   ];
@@ -69,9 +69,18 @@ function ContractList({ token }) {
     'Expired': 'bg-danger',
     'Pending': 'bg-secondary'
   };
-
+  // State for multi-column sorting 
+  // An array of objects, where each object is a sort configuration.
+  // The order in this array determines the sort priority.
+  // Default sort by contract_id descending.
+  const [sortConfigs, setSortConfigs] = useState([{ key: 'contract_id', direction: 'desc' }]);
+  const sortableColumns = [
+    'start_date', 'end_date', 'created_at', 'contract_name', 
+    'client_name', 'username', 'project_name', 'location', 'category'
+  ];
+  
   const fetchContracts = useCallback(
-    debounce(async (searchTerm, page, statuses) => {
+    debounce(async (searchTerm, page, statuses, sortCfgs) => {
       if (!token) return;
       setLoading(true);
       try {
@@ -82,6 +91,14 @@ function ContractList({ token }) {
         if (statuses.length > 0) {
           // Join the array into a comma-separated string, e.g., "Active,Expired"
           params.statuses = statuses.join(','); 
+        }
+
+        // Logic to add sort parameters
+        if (sortCfgs && sortCfgs.length > 0) {
+          sortCfgs.forEach((config, index) => {
+            params[`sort_by_${index + 1}`] = config.key;
+            params[`sort_dir_${index + 1}`] = config.direction;
+          });
         }
 
         const response = await api.get('/contracts', { params });
@@ -105,8 +122,8 @@ function ContractList({ token }) {
   );
 
   useEffect(() => {
-    fetchContracts(search, currentPage, selectedStatuses);
-  }, [search, currentPage, fetchContracts, selectedStatuses]);
+    fetchContracts(search, currentPage, selectedStatuses, sortConfigs);
+  }, [search, currentPage, selectedStatuses, sortConfigs, fetchContracts]);
 
   const handleDelete = async (contract_id) => {
     if (window.confirm('Are you sure you want to delete this contract?')) {
@@ -164,6 +181,63 @@ function ContractList({ token }) {
     reorderColumns(result.source.index, result.destination.index);
   };
 
+  // Handler for sorting logic
+  const handleSort = (clickedKey, event) => {
+    setSortConfigs(prevConfigs => {
+      // Check if the Shift key was held during the click
+      const isMultiSort = event.shiftKey;
+  
+      if (isMultiSort) {
+        // --- LOGIC FOR MULTI-SORT (when Shift is pressed) ---
+        const newConfigs = [...prevConfigs];
+        const existingSortIndex = newConfigs.findIndex(config => config.key === clickedKey);
+  
+        if (existingSortIndex > -1) {
+          // The column is already sorted, toggle its direction or remove it
+          const currentDirection = newConfigs[existingSortIndex].direction;
+          if (currentDirection === 'asc') {
+            newConfigs[existingSortIndex].direction = 'desc';
+          } else {
+            newConfigs.splice(existingSortIndex, 1);
+          }
+        } else {
+          // Add a new sort condition (up to the limit of 2)
+          if (newConfigs.length < 2) {
+            newConfigs.push({ key: clickedKey, direction: 'asc' });
+          } else {
+            // Optional: Replace the last one if limit is reached
+            newConfigs[1] = { key: clickedKey, direction: 'asc' };
+          }
+        }
+        return newConfigs.length > 0 ? newConfigs : [{ key: 'contract_id', direction: 'desc' }]; // Prevent empty sort
+  
+      } else {
+        // --- LOGIC FOR SINGLE-SORT (normal click, no Shift) ---
+        // This is the fix for your current problem.
+        const currentSort = prevConfigs.length > 0 && prevConfigs[0];
+        
+        if (currentSort && currentSort.key === clickedKey) {
+          // The user clicked the same column, just toggle direction
+          return [{ key: clickedKey, direction: currentSort.direction === 'asc' ? 'desc' : 'asc' }];
+        } else {
+          // The user clicked a new column, replace all sorts with this one
+          return [{ key: clickedKey, direction: 'asc' }];
+        }
+      }
+    });
+    setCurrentPage(1);
+  };
+
+  // Handler to clear all sorting
+  const clearSorting = () => {
+    // Reset to a default sort or an empty array
+    setSortConfigs([{ key: 'contract_id', direction: 'desc' }]);
+    setCurrentPage(1);
+  };
+
+  // Check if the current sort is the default one
+const isDefaultSort = JSON.stringify(sortConfigs) === JSON.stringify([{ key: 'contract_id', direction: 'desc' }]);
+
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startItem = (currentPage - 1) * itemsPerPage + 1;
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
@@ -180,6 +254,14 @@ function ContractList({ token }) {
           <Link to="/contracts/new" className="btn btn-primary w-100 mb-2">
             Add New Contract
           </Link>
+          {!isDefaultSort && (
+            <button 
+              className="btn btn-secondary w-100 mb-2" 
+              onClick={clearSorting}
+            >
+              Clear Sort
+            </button>
+          )}
           <SearchBar
             value={search}
             onChange={handleSearch}
@@ -292,14 +374,18 @@ function ContractList({ token }) {
                         <tr ref={provided.innerRef} {...provided.droppableProps}>
                           {/* Render draggable column headers based on order array */}
                           {/* Only visible columns are shown, reordered by user drag */}
-                          {order.map((key, index) => (
-                            visibleColumns[key] && (
+                          {order.map((key, index) => {
+                            // Calculate display properties for each column
+                            const isSortable = sortableColumns.includes(key);
+                            const sortConfig = sortConfigs.find(c => c.key === key);
+                            const sortIndex = sortConfig ? sortConfigs.indexOf(sortConfig) + 1 : -1;
+
+                            return visibleColumns[key] && (
                               <Draggable key={key} draggableId={key} index={index}>
-                                {(provided) => (
+                                {(provided, snapshot) => (
                                   <th
                                     ref={provided.innerRef}
                                     {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
                                     key={key}
                                     scope="col"
                                     style={{
@@ -311,12 +397,46 @@ function ContractList({ token }) {
                                       padding: '8px',
                                     }}
                                   >
-                                    {columns.find(col => col.key === key).label}
+                                    <div className="d-flex align-items-center justify-content-between">
+                                      {/* Area 1: Clickable area for sorting */}
+                                      <span 
+                                        onClick={isSortable ? (e) => handleSort(key, e) : undefined}
+                                        className={`text-nowrap ${isSortable ? 'clickable-header' : ''}`}
+                                        style={{ cursor: isSortable ? 'pointer' : 'default', flexGrow: 1 }}
+                                      >
+                                        {/* Column Label */}
+                                        {columns.find(col => col.key === key)?.label || key}
+                                        {/* Sorting Icons and Badge (only for sortable columns) */}
+                                        {isSortable && (
+                                          <span className={`ml-2 sort-arrow ${sortConfig ? 'sort-arrow-active' : ''}`}>
+                                            {/* Show arrow based on direction */}
+                                            {sortConfig?.direction === 'asc' ? '▲' : '▼'}
+                                            
+                                            {/* Show priority number badge if it's being sorted */}
+                                            {sortConfig && (
+                                              <small className="badge badge-pill badge-light ml-1">
+                                                {sortIndex}
+                                              </small>
+                                            )}
+                                          </span>
+                                        )}
+                                      </span>
+                                      {/* Area 2: Drag handle area */}
+                                      <span
+                                        // Apply drag handle props ONLY to this element
+                                        {...provided.dragHandleProps} 
+                                        className="ml-2 drag-handle"
+                                        style={{ cursor: 'grab', padding: '0 4px', lineHeight: 1 }}
+                                      >
+                                        {/* A simple text icon for the handle. You can replace with an SVG or FontAwesome icon. */}
+                                        ⠿
+                                      </span>
+                                    </div>
                                   </th>
                                 )}
                               </Draggable>
                             )
-                          ))}
+                          })}
                           {provided.placeholder}
                           {/* Actions column remains fixed and non-draggable */}
                           <th scope="col" style={{ cursor: 'default' }}>Actions</th>
