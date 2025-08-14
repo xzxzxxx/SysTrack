@@ -25,7 +25,7 @@ function ContractList({ token }) {
   const projectId = searchParams.get('project_id');
 
   // statuses filter
-  const [selectedStatuses, setSelectedStatuses] = useState(['Active']);
+  const [selectedStatuses, setSelectedStatuses] = useState([]);
   const statusOptions = ['Active', 'Pending', 'Expiring Soon', 'Expired'];
 
   // Define all columns with groups for organized filtering
