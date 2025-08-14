@@ -20,7 +20,7 @@ function Dashboard({ token }) {
           api.get('/contracts')
         ]);
         const expiringRes = await api.get('/contracts', {
-          params: { status: 'expiring_soon' }
+          params: { status: 'expiring_soon' } // borken here, but not coursing bug, i have updated the frontend to handle stuats selection
         });
 
         setStats({
