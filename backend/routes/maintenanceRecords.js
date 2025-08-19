@@ -19,7 +19,7 @@ router.use(checkRole(['admin', 'AE']));
  * Create a new maintenance record. This is a transactional operation.
  * It first creates the main record, then associates the PICs (Person In Charge) in the junction table.
  */
-router.get('/', async (req, res) => {
+router.post('/', async (req, res) => {
     const {
         service_date,
         service_code,
@@ -88,8 +88,8 @@ router.get('/', async (req, res) => {
     }
 });
 
-// POST /api/maintenance-records - Create a new maintenance record
-router.post('/', async (req, res) => {
+
+router.get('/', async (req, res) => {
     const {
         page = 1,
         limit = 10,
@@ -111,7 +111,6 @@ router.post('/', async (req, res) => {
         FROM maintenance_records mr
         LEFT JOIN clients c ON mr.client_id = c.client_id
         LEFT JOIN users u_creator ON mr.user_id = u_creator.user_id
-        -- We will add a join for PICs later to enable searching by 'ae_name'
       `;
     
       let whereClauses = [];
@@ -135,6 +134,17 @@ router.post('/', async (req, res) => {
         whereClauses.push(`mr.job_note ILIKE $${paramIndex++}`);
         queryParams.push(`%${job_note}%`);
       }
+      if (ae_name) {
+        whereClauses.push(`
+          mr.maintenance_id IN (
+            SELECT mrp.maintenance_request_id
+            FROM maintenance_request_pics mrp
+            JOIN users u_pic ON mrp.pic_user_id = u_pic.user_id
+            WHERE u_pic.username ILIKE $${paramIndex++}
+          )
+        `);
+        queryParams.push(`%${ae_name}%`);
+      }
       // Add other search fields here...
     
       const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
@@ -147,20 +157,23 @@ router.post('/', async (req, res) => {
     
       try {
         // --- Query to get the total count of matching records ---
-        const countQuery = `SELECT COUNT(DISTINCT mr.maintenance_id) ${baseQuery} ${whereString}`;
+        const countQuery = `SELECT COUNT(DISTINCT mr.maintenance_id) AS total_count ${baseQuery} ${whereString}`;
         const totalResult = await pool.query(countQuery, queryParams);
-        const total = parseInt(totalResult.rows[0].count, 10);
+        const total = parseInt(totalResult.rows.count, 10);
     
         // --- Query to get the paginated data ---
         const dataQuery = `
           SELECT 
             mr.*, 
             c.client_name, 
-            u_creator.username as creator_username
-            -- We will also select a list of PIC names here later
+            u_creator.username as creator_username,
+            -- This json_agg function gathers all PICs for each record into a single JSON array.
+            (SELECT json_agg(jsonb_build_object('user_id', u_pic.user_id, 'username', u_pic.username))
+            FROM maintenance_request_pics mrp
+            JOIN users u_pic ON mrp.pic_user_id = u_pic.user_id
+            WHERE mrp.maintenance_request_id = mr.maintenance_id) AS pics
           ${baseQuery}
           ${whereString}
-          GROUP BY mr.maintenance_id, c.client_name, u_creator.username
           ${orderByString}
           LIMIT $${paramIndex++} OFFSET $${paramIndex++}
         `;
@@ -260,7 +273,7 @@ router.put('/:id', async (req, res) => {
 // DELETE /api/maintenance-records/:id - Delete a record
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
-    const requestingUserId = req.user.id;
+    const requestingUserId = req.user.user_id;
     const requestingUserRole = req.user.role;
   
     try {

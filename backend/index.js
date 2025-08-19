@@ -11,6 +11,7 @@ const contractRoutes = require('./routes/contracts');
 const userRoutes = require('./routes/users');
 const projectRoutes = require('./routes/projects');
 const notificationsRouter = require('./routes/notifications');
+const maintenanceRoutes = require('./routes/maintenanceRecords');
 const { verify } = require('jsonwebtoken');
 const helmet = require('helmet');
 
@@ -46,6 +47,8 @@ app.use('/api/contracts', verifyToken, contractRoutes);
 app.use('/api/users', verifyToken, userRoutes);
 app.use('/api/projects', verifyToken, projectRoutes);
 app.use('/api/notifications', verifyToken, notificationsRouter);
+app.use('/api/maintenance-records', verifyToken, maintenanceRoutes);
+
 
 // Start server
 app.listen(port, () => {
