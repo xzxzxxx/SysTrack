@@ -24,7 +24,7 @@ router.post('/', async (req, res) => {
         service_date,
         service_code,
         client_id,
-        job_note,
+        jobnote,
         location_district,
         is_warranty,
         sales,
@@ -49,6 +49,17 @@ router.post('/', async (req, res) => {
     // The user_id of the creator comes from the token, not the request body.
     const creatorUserId = req.user.user_id;
 
+    // Validate that the provided jobnote exists in the contracts 
+    if (jobnote) {
+      const contractCheck = await pool.query(
+        'SELECT 1 FROM contracts WHERE jobnote = $1',
+        [jobnote]
+      );
+      if (contractCheck.rows.length === 0) {
+        return res.status(400).json({ error: `Jobnote "${jobnote}" not found in any existing contract.` });
+      }
+    }
+
     // Start a client connection from the pool to manage the transaction.
     const client = await pool.connect();
 
@@ -59,7 +70,7 @@ router.post('/', async (req, res) => {
         // The initial status is always 'New' as per our workflow.
         const newRecordQuery = `
           INSERT INTO maintenance_records (
-            service_date, service_code, client_id, job_note, location_district,
+            service_date, service_code, client_id, jobnote, location_district,
             is_warranty, sales_text, product_model, serial_no, problem_description,
             service_type, product_type, support_method, symptom_classification, alias,
             user_id, status
@@ -67,7 +78,7 @@ router.post('/', async (req, res) => {
           RETURNING *;
         `;
         const newRecord = await client.query(newRecordQuery, [
-          service_date, service_code, client_id, job_note, location_district,
+          service_date, service_code, client_id, jobnote, location_district,
           is_warranty, sales, product_model, serial_no, problem_description,
           service_type, product_type, support_method, symptom_classification, alias,
           creatorUserId, 'New' // Set initial status to 'New'
@@ -97,7 +108,7 @@ router.get('/', async (req, res) => {
         // --- Individual search fields ---
         service_code,
         client_name,
-        job_note,
+        jobnote,
         location_district,
         ae_name, // This will search based on the PICs assigned
         // --- Sorting fields ---
@@ -130,9 +141,9 @@ router.get('/', async (req, res) => {
         whereClauses.push(`c.client_name ILIKE $${paramIndex++}`);
         queryParams.push(`%${client_name}%`);
       }
-      if (job_note) {
-        whereClauses.push(`mr.job_note ILIKE $${paramIndex++}`);
-        queryParams.push(`%${job_note}%`);
+      if (jobnote) {
+        whereClauses.push(`mr.jobnote ILIKE $${paramIndex++}`);
+        queryParams.push(`%${jobnote}%`);
       }
       if (ae_name) {
         whereClauses.push(`
@@ -227,7 +238,19 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
     // pic_ids should be an array of user IDs, e.g., [1, 5, 10]
-    const { pic_ids, ...fieldsToUpdate } = req.body;
+    const { pic_ids, jobnote, ...fieldsToUpdate } = req.body;
+
+    if (jobnote) {
+      try {
+        const contractCheck = await pool.query('SELECT 1 FROM contracts WHERE jobnote = $1', [jobnote]);
+        if (contractCheck.rows.length === 0) {
+          return res.status(400).json({ error: `Invalid Job Note: No contract found with Job Note "${jobnote}".` });
+        }
+      } catch(err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Error validating Job Note.' });
+      }
+    }  
   
     const client = await pool.connect();
     try {

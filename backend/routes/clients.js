@@ -173,32 +173,4 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// Lightweight endpoint for async dropdown search
-router.get('/lookup', async (req, res) => {
-  const { search } = req.query;
-  
-  try {
-    // This query is simple and fast, perfect for a dropdown.
-    let query = `
-      SELECT client_id, client_name 
-      FROM Clients
-    `;
-    const values = [];
-
-    if (search) {
-      // Search by client name or their dedicated number
-      query += ' WHERE client_name ILIKE $1 OR dedicated_number ILIKE $1';
-      values.push(`%${search}%`);
-    }
-
-    query += ' ORDER BY client_name LIMIT 20'; // Limit results for a responsive UI
-
-    const result = await pool.query(query, values);
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err.stack);
-    res.status(500).json({ error: 'Server error fetching client lookup data' });
-  }
-});
-
 module.exports = router;
