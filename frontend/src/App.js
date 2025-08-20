@@ -12,6 +12,7 @@ import Dashboard from './components/dashboard/Dashboard';
 import Projects from './components/projects/Projects';
 import NotificationReview from './components/contracts/NotificationReview';
 import MaintenanceRequestList from './components/maintenance/MaintenanceRequestList';
+import MaintenanceRequestForm from './components/maintenance/MaintenanceRequestForm';
 
 // A simple component to handle routes that require authentication
 const PrivateRoute = ({ children, token, logout, ...rest }) => {
@@ -125,6 +126,12 @@ function App() {
             </Route>
             <Route path="/notifications">
               <NotificationReview token={token} />
+            </Route>
+            <Route path="/maintenance/new">
+              <MaintenanceRequestForm token={token} />
+            </Route>
+            <Route path="/maintenance/:id/edit">
+              <MaintenanceRequestForm token={token} />
             </Route>
             <Route path="/maintenance">
               <MaintenanceRequestList token={token} />

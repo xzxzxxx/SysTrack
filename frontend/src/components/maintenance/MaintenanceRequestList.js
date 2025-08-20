@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
 import api from '../../utils/api';
 import debounce from 'lodash.debounce';
 import MaintenanceSearchFilters from './MaintenanceSearchFilters'; // Import the new search component
@@ -11,6 +12,8 @@ import './MaintenanceRequestList.css';
 // The main component for displaying and managing maintenance records
 function MaintenanceRequestList({ token }) {
   // State for data and UI control
+  const history = useHistory();
+
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -159,9 +162,12 @@ function MaintenanceRequestList({ token }) {
       <div className="row">
         {/* Left Sidebar for Filters */}
         <div className="col-md-2 col-12 mb-3">
-          <Link to="/maintenance/new" className="btn btn-primary w-100 mb-2">
+          <button 
+            className="btn btn-primary w-100 mb-2"
+            onClick={() => history.push('/maintenance/new')}
+          >
             Add New Request
-          </Link>
+          </button>
           <hr />
           <h5>Search Filters</h5>
           <MaintenanceSearchFilters filters={filters} onFilterChange={handleFilterChange} />
@@ -285,7 +291,12 @@ function MaintenanceRequestList({ token }) {
                         )
                       )}
                       <td>
-                        <Link to={`/maintenance/${record.maintenance_id}/edit`} className="btn btn-sm btn-warning">Edit</Link>
+                        <button
+                          className="btn btn-sm btn-warning"
+                          onClick={() => history.push(`/maintenance/${record.maintenance_id}/edit`)}
+                        >
+                          Edit
+                        </button>
                       </td>
                     </tr>
                   ))}
