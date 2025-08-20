@@ -48,10 +48,7 @@ function MaintenanceRequestList({ token }) {
     { key: 'serial_no', label: 'Serial No.' },
     { key: 'problem_description', label: 'Problem Description' },
     { key: 'solution_details', label: 'Solution Details' },
-    { key: 'creator_username', label: 'Created By', sortable: true },
     { key: 'pics', label: 'PICs' },
-    { key: 'created_at', label: 'Created At', sortable: true },
-    { key: 'updated_at', label: 'Updated At', sortable: true },
     { key: 'labor_details', label: 'Labor Details' },
     { key: 'parts_details', label: 'Parts Details' },
     { key: 'arrive_time', label: 'Arrive Time' },
@@ -62,6 +59,9 @@ function MaintenanceRequestList({ token }) {
     { key: 'product_type', label: 'Product Type' },
     { key: 'support_method', label: 'Support Method' },
     { key: 'symptom_classification', label: 'Symptom Classification' },
+    { key: 'creator_username', label: 'Created By', sortable: true },
+    { key: 'created_at', label: 'Created At', sortable: true },
+    { key: 'updated_at', label: 'Updated At', sortable: true },
   ];
 
 

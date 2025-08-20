@@ -159,7 +159,7 @@ router.get('/', async (req, res) => {
         // --- Query to get the total count of matching records ---
         const countQuery = `SELECT COUNT(DISTINCT mr.maintenance_id) AS total_count ${baseQuery} ${whereString}`;
         const totalResult = await pool.query(countQuery, queryParams);
-        const total = parseInt(totalResult.rows.count, 10);
+        const total = parseInt(totalResult.rows[0].total_count, 10) || 0;
     
         // --- Query to get the paginated data ---
         const dataQuery = `
@@ -173,7 +173,6 @@ router.get('/', async (req, res) => {
             WHERE mrp.maintenance_request_id = mr.maintenance_id) AS pics
           ${baseQuery}
           ${whereString}
-          GROUP BY mr.maintenance_id, c.client_name, u_creator.username
           ${orderByString}
           LIMIT $${paramIndex++} OFFSET $${paramIndex++}
         `;
