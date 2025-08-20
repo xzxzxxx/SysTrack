@@ -35,20 +35,35 @@ function MaintenanceRequestList({ token }) {
 
   const columns = [
     { key: 'maintenance_id', label: 'ID', sortable: true },
+    { key: 'status', label: 'Status', sortable: true },
     { key: 'service_date', label: 'Service Date', sortable: true },
     { key: 'service_code', label: 'Service Code', sortable: true },
     { key: 'client_name', label: 'Client', sortable: true },
-    { key: 'job_note', label: 'Job Note' },
-    { key: 'location_district', label: 'Location' },
-    { key: 'status', label: 'Status', sortable: true },
+    { key: 'alias', label: 'Alias' },
+    { key: 'client_code', label: 'Client Code' },
+    { key: 'jobnote', label: 'Job Note' },
     { key: 'is_warranty', label: 'Warranty' },
+    { key: 'sales', label: 'Sales' },
     { key: 'product_model', label: 'Product Model' },
     { key: 'serial_no', label: 'Serial No.' },
+    { key: 'problem_description', label: 'Problem Description' },
+    { key: 'solution_details', label: 'Solution Details' },
     { key: 'creator_username', label: 'Created By', sortable: true },
     { key: 'pics', label: 'PICs' },
     { key: 'created_at', label: 'Created At', sortable: true },
     { key: 'updated_at', label: 'Updated At', sortable: true },
+    { key: 'labor_details', label: 'Labor Details' },
+    { key: 'parts_details', label: 'Parts Details' },
+    { key: 'arrive_time', label: 'Arrive Time' },
+    { key: 'depart_time', label: 'Depart Time' },
+    { key: 'completion_date', label: 'Completion Date' },
+    { key: 'remark', label: 'Remark' },
+    { key: 'service_type', label: 'Service Type' },
+    { key: 'product_type', label: 'Product Type' },
+    { key: 'support_method', label: 'Support Method' },
+    { key: 'symptom_classification', label: 'Symptom Classification' },
   ];
+
 
   // useColumnFilter hook
   const { visibleColumns, toggleColumn, resetColumns, order, reorderColumns } = useColumnFilter(columns, 'maintenance_columns_v1');
@@ -283,6 +298,10 @@ function MaintenanceRequestList({ token }) {
                               ) : key === 'pics' ? (
                                 // This correctly displays the list of PICs from our API
                                 record.pics?.map(pic => pic.username).join(', ') || '-'
+                              ) : key === 'is_warranty' ? (
+                                record.is_warranty ? 'Yes' : 'No'
+                              ) : ['service_date', 'created_at'].includes(key) ? (
+                                record[key] ? new Date(record[key]).toLocaleDateString() : '-'
                               ) : (
                                 record[key] || '-'
                               )

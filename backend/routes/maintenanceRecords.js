@@ -164,16 +164,16 @@ router.get('/', async (req, res) => {
         // --- Query to get the paginated data ---
         const dataQuery = `
           SELECT 
-            mr.*, 
+            mr.*, -- Selects all fields from the maintenance_records table itself
             c.client_name, 
             u_creator.username as creator_username,
-            -- This json_agg function gathers all PICs for each record into a single JSON array.
             (SELECT json_agg(jsonb_build_object('user_id', u_pic.user_id, 'username', u_pic.username))
             FROM maintenance_request_pics mrp
             JOIN users u_pic ON mrp.pic_user_id = u_pic.user_id
             WHERE mrp.maintenance_request_id = mr.maintenance_id) AS pics
           ${baseQuery}
           ${whereString}
+          GROUP BY mr.maintenance_id, c.client_name, u_creator.username
           ${orderByString}
           LIMIT $${paramIndex++} OFFSET $${paramIndex++}
         `;
