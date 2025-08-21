@@ -8,54 +8,77 @@ const pool = new Pool({
 
 // Get all clients (updated to include dynamic counts)
 router.get('/', async (req, res) => {
+
+  console.log('Received search request with query:', req.query);
   const { search, sortBy, sortOrder, page = 1, limit = 50 } = req.query;
   const offset = (page - 1) * parseInt(limit);
-  const values = [];
+
+  // --- Start of refactored logic ---
+  const dataParams = [];
+  const countParams = [];
   let whereClause = '';
-  let orderByClause = '';
 
-  // Search by client_name, dedicated_number, or email
+  // Handle the search parameter for both queries
   if (search) {
-    whereClause = ' WHERE client_name ILIKE $1 OR dedicated_number ILIKE $1 OR email ILIKE $1';
-    values.push(`%${search}%`);
+      // The search term for ILIKE (case-insensitive)
+      const searchTerm = `%${search}%`;
+      
+      // Use $1 as a placeholder for the search term
+      whereClause = ' WHERE client_name ILIKE $1 OR dedicated_number ILIKE $1 OR email ILIKE $1';
+      
+      // Add the search term to both parameter arrays
+      dataParams.push(searchTerm);
+      countParams.push(searchTerm);
   }
+  // --- End of search logic ---
 
-  // Sort by dynamic no_of_orders or no_of_renew (calculated in query)
+  let orderByClause = '';
   if (sortBy === 'no_of_orders' || sortBy === 'no_of_renew') {
-    const order = sortOrder === 'desc' ? 'DESC' : 'ASC';
-    orderByClause = ` ORDER BY ${sortBy} ${order}`;
+      const order = sortOrder === 'desc' ? 'DESC' : 'ASC';
+      orderByClause = ` ORDER BY ${sortBy} ${order}`;
   }
 
-  // Main query with dynamic counts using subqueries
-  const query = `
-    SELECT 
-      c.*, 
-      (SELECT COUNT(*) FROM Contracts WHERE client_id = c.client_id) AS no_of_orders,
-      (SELECT COUNT(*) FROM Contracts WHERE client_id = c.client_id AND previous_contract IS NOT NULL) AS no_of_renew
-    FROM Clients c
-    ${whereClause}
-    ${orderByClause}
-    LIMIT $${values.length + 1}
-    OFFSET $${values.length + 2}
+  // Add pagination parameters ONLY to the data query array
+  dataParams.push(limit, offset);
+
+  // Build the final queries
+  const dataQuery = `
+      SELECT
+          c.*,
+          (SELECT COUNT(*) FROM Contracts WHERE client_id = c.client_id) AS no_of_orders,
+          (SELECT COUNT(*) FROM Contracts WHERE client_id = c.client_id AND previous_contract IS NOT NULL) AS no_of_renew
+      FROM Clients c
+      ${whereClause}
+      ${orderByClause}
+      LIMIT $${dataParams.length - 1}  -- Placeholder for limit
+      OFFSET $${dataParams.length}    -- Placeholder for offset
   `;
+
   const countQuery = `
-    SELECT COUNT(*) FROM Clients
-    ${whereClause}
+      SELECT COUNT(*) FROM Clients
+      ${whereClause}
   `;
-  values.push(limit, offset);
 
   try {
-    const [dataResult, countResult] = await Promise.all([
-      pool.query(query, values),
-      pool.query(countQuery, values.slice(0, -2)),
-    ]);
-    res.json({
-      data: dataResult.rows,
-      total: parseInt(countResult.rows[0].count, 10),
-    });
+      const [dataResult, countResult] = await Promise.all([
+          // Execute queries with their respective, separate parameter arrays
+          pool.query(dataQuery, dataParams),
+          pool.query(countQuery, countParams),
+      ]);
+
+      // *** ADD THIS BLOCK FOR DEBUGGING ***
+      if (dataResult.rows.length > 0) {
+        console.log('First client object fetched from DB:', dataResult.rows[0]);
+      }
+      // *** END OF DEBUGGING BLOCK ***
+
+      res.json({
+          data: dataResult.rows,
+          total: parseInt(countResult.rows[0].count, 10),
+      });
   } catch (err) {
-    console.error(err.stack);
-    res.status(500).json({ error: 'Server error' });
+      console.error(err.stack);
+      res.status(500).json({ error: 'Server error' });
   }
 });
 

@@ -56,7 +56,6 @@ function ContractForm({ token, defaultType = 'new' }) {
   });
 
   // State for dropdown data and UI feedback
-  const [clients, setClients] = useState([]); // List of clients from /api/clients
   const [error, setError] = useState(''); // Error message for API failures
   const [loading, setLoading] = useState(false); // Loading state for API calls
   const [toast, setToast] = useState({ show: false, message: '', type: '' }); // Toast for success/error messages
@@ -152,19 +151,6 @@ function ContractForm({ token, defaultType = 'new' }) {
       setError('Invalid token');
     }
 
-    // Fetch clients for the dropdown
-    const fetchClients = async () => {
-      setLoading(true);
-      try {
-        const response = await api.get('/clients');
-        setClients(response.data.data || []);
-      } catch (err) {
-        setError(err.response?.data?.error || 'Failed to fetch clients');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     // Fetch contract data for edit mode
     const fetchContract = async () => {
       if (!contract_id) return;
@@ -223,7 +209,6 @@ function ContractForm({ token, defaultType = 'new' }) {
       }
     };
 
-    fetchClients();
     fetchContract();
   }, [contract_id, token]);
 

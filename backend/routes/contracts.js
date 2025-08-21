@@ -114,7 +114,7 @@ const allowedSortColumns = {
 router.get('/', async (req, res) => {
   try{
     // Destructure all possible query parameters
-    const { search, page = 1, limit = 50, project_id, statuses } = req.query;
+    const { search, page = 1, limit = 50, project_id, statuses, jobnote } = req.query;
     const offset = (page - 1) * limit;
 
     // Base query with all necessary joins
@@ -148,6 +148,11 @@ router.get('/', async (req, res) => {
       values.push(project_id);
       conditions.push(`c.project_id = $${values.length}`);
     }
+
+    if (jobnote) {
+      values.push(jobnote);
+      conditions.push(`c.jobnote = $${values.length}`);
+  }
 
     // 3. Handle statuses filter
     if (statuses) {
@@ -203,7 +208,7 @@ router.get('/', async (req, res) => {
     const offsetPlaceholder = `$${dataValues.length}`;
 
     const dataQuery = `
-        SELECT c.*, p.project_name, cl.client_name, u.username,
+        SELECT c.*, p.project_name, cl.client_name, u.username, cl.dedicated_number,
           (CASE
             WHEN NOW() < c.start_date THEN 'Pending'
             WHEN NOW() > c.end_date THEN 'Expired'
