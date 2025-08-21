@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../utils/api';
 import { Link, useLocation, useHistory } from 'react-router-dom';
 import debounce from 'lodash.debounce';
-import SearchBar from '../common/SearchBar';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import useColumnFilter from '../../utils/useColumnFilter';
 import './ContractList.css';
@@ -33,6 +32,9 @@ function ContractList({ token }) {
   // statuses filter
   const [selectedStatuses, setSelectedStatuses] = useState([]);
   const statusOptions = ['Active', 'Pending', 'Expiring Soon', 'Expired'];
+
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const categoryOptions = ['SVR', 'DSS', 'EMB', 'Medical'];
 
   // Define all columns with groups for organized filtering
   // Groups (PIC and SLA) help categorize related columns for user convenience
@@ -86,7 +88,7 @@ function ContractList({ token }) {
   ];
   
   const fetchContracts = useCallback(
-    async (filters, page, statuses, sortCfgs) => {
+    async (filters, page, statuses, categories, sortCfgs) => {
       if (!token) return;
       setLoading(true);
       try {
@@ -97,6 +99,9 @@ function ContractList({ token }) {
         if (statuses.length > 0) {
           // Join the array into a comma-separated string, e.g., "Active,Expired"
           params.statuses = statuses.join(','); 
+        }
+        if (categories.length > 0) {
+          params.categories = categories.join(',');
         }
 
         // Logic to add sort parameters
@@ -131,8 +136,8 @@ function ContractList({ token }) {
   const debouncedFetch = useCallback(debounce(fetchContracts, 300), [fetchContracts]);
 
   useEffect(() => {
-    debouncedFetch(searchFilters, currentPage, selectedStatuses, sortConfigs);
-  }, [searchFilters, currentPage, selectedStatuses, sortConfigs, debouncedFetch]);
+    debouncedFetch(searchFilters, currentPage, selectedStatuses, selectedCategories, sortConfigs);
+  }, [searchFilters, currentPage, selectedStatuses, selectedCategories, sortConfigs, debouncedFetch]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -184,6 +189,15 @@ function ContractList({ token }) {
       }
     });
     // Reset to page 1 when filter changes
+    setCurrentPage(1);
+  };
+
+  const handleCategoryToggle = (categoryToToggle) => {
+    setSelectedCategories(prev =>
+      prev.includes(categoryToToggle)
+        ? prev.filter(c => c !== categoryToToggle)
+        : [...prev, categoryToToggle]
+    );
     setCurrentPage(1);
   };
 
@@ -407,7 +421,7 @@ function ContractList({ token }) {
           )}
           {error && !loading && !toast.show && <div className="alert alert-danger">{error}</div>}
           {contracts.length === 0 && !loading && !showNoContractsPopup && <p>No contracts found.</p>}
-          {/* START: New Status Filter Bar */}
+          {/* Status Filter Bar */}
           <div className="status-filter-bar mb-3">
             {statusOptions.map(status => (
               <button
@@ -419,7 +433,20 @@ function ContractList({ token }) {
               </button>
             ))}
           </div>
-          {/* END: New Status Filter Bar */}
+          {/* Category Filter Bar */}
+          <div className="d-flex align-items-center mb-3">
+            <div className="status-filter-bar">
+                {categoryOptions.map(category => (
+                <button
+                    key={category}
+                    onClick={() => handleCategoryToggle(category)}
+                    className={`status-filter-item ${selectedCategories.includes(category) ? 'active' : ''}`}
+                >
+                    {category}
+                </button>
+                ))}
+            </div>
+          </div>
           {contracts.length > 0 && (
             <div className="table">
               <table className="table table-striped">

@@ -116,7 +116,7 @@ const allowedSortColumns = {
 router.get('/', async (req, res) => {
   try{
     // Destructure all possible query parameters
-    const { page = 1, limit = 50, project_id, statuses, jobnote, contract_name, client_name, location  } = req.query;
+    const { page = 1, limit = 50, project_id, statuses, jobnote, contract_name, client_name, location, categories } = req.query;
     const offset = (page - 1) * limit;
 
     // Base query with all necessary joins
@@ -173,6 +173,12 @@ router.get('/', async (req, res) => {
           ELSE 'Active'
         END) = ANY($${values.length})
       `);
+    }
+
+    if (categories) {
+      const categoryArray = categories.split(',');
+      // Use the = ANY() operator to check if c.category is in the provided array
+      conditions.push(`c.category = ANY($${values.push(categoryArray)})`);
     }
 
     let whereClause = '';
