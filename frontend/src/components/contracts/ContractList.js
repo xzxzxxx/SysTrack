@@ -12,7 +12,13 @@ function ContractList({ token }) {
   const [contracts, setContracts] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState('');
+  // This object will hold the values for each individual search bar.
+  const [searchFilters, setSearchFilters] = useState({
+    contract_name: '',
+    client_name: '',
+    jobnote: '',
+    location: '',
+  });
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -80,11 +86,11 @@ function ContractList({ token }) {
   ];
   
   const fetchContracts = useCallback(
-    debounce(async (searchTerm, page, statuses, sortCfgs) => {
+    async (filters, page, statuses, sortCfgs) => {
       if (!token) return;
       setLoading(true);
       try {
-        const params = { search: searchTerm, page, limit: itemsPerPage };
+        const params = { ...filters, page, limit: itemsPerPage };
         if (projectId) {
           params.project_id = projectId;
         }
@@ -103,7 +109,6 @@ function ContractList({ token }) {
 
         const response = await api.get('/contracts', { params });
         const data = response.data.data;
-        console.log('Fetched contracts:', data);
         if (projectId && data.length === 0) {
           setShowNoContractsPopup(true);
         } else {
@@ -118,13 +123,25 @@ function ContractList({ token }) {
       } finally {
         setLoading(false);
       }
-    }, 300),
+    },
     [token, projectId]
   );
 
+  // Debounced version of fetchContracts for real-time search
+  const debouncedFetch = useCallback(debounce(fetchContracts, 300), [fetchContracts]);
+
   useEffect(() => {
-    fetchContracts(search, currentPage, selectedStatuses, sortConfigs);
-  }, [search, currentPage, selectedStatuses, sortConfigs, fetchContracts]);
+    debouncedFetch(searchFilters, currentPage, selectedStatuses, sortConfigs);
+  }, [searchFilters, currentPage, selectedStatuses, sortConfigs, debouncedFetch]);
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setSearchFilters(prevFilters => ({
+      ...prevFilters,
+      [name]: value
+    }));
+    setCurrentPage(1); // Reset to first page on any filter change
+  };
 
   const handleDelete = async (contract_id) => {
     if (window.confirm('Are you sure you want to delete this contract?')) {
@@ -144,11 +161,6 @@ function ContractList({ token }) {
         setLoading(false);
       }
     }
-  };
-
-  const handleSearch = (value) => {
-    setSearch(value);
-    setCurrentPage(1);
   };
 
   const handlePageChange = (page) => {
@@ -237,7 +249,7 @@ function ContractList({ token }) {
   };
 
   // Check if the current sort is the default one
-const isDefaultSort = JSON.stringify(sortConfigs) === JSON.stringify([{ key: 'contract_id', direction: 'desc' }]);
+  const isDefaultSort = JSON.stringify(sortConfigs) === JSON.stringify([{ key: 'contract_id', direction: 'desc' }]);
 
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startItem = (currentPage - 1) * itemsPerPage + 1;
@@ -263,13 +275,56 @@ const isDefaultSort = JSON.stringify(sortConfigs) === JSON.stringify([{ key: 'co
               Clear Sort
             </button>
           )}
-          <SearchBar
-            value={search}
-            onChange={handleSearch}
-            placeholder="Search by Contract Name, Client, Job Note, or Location..."
-            isSearching={loading}
-            className="w-100 mb-2"
-          />
+          <hr />
+          <h5>Search Filters</h5>
+          <div className="form-group">
+            <label htmlFor="contract_name">Contract Name</label>
+            <input
+              type="text"
+              id="contract_name"
+              name="contract_name"
+              className="form-control"
+              placeholder="Search by name..."
+              value={searchFilters.contract_name}
+              onChange={handleFilterChange}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="client_name">Client Name</label>
+            <input
+              type="text"
+              id="client_name"
+              name="client_name"
+              className="form-control"
+              placeholder="Search by client..."
+              value={searchFilters.client_name}
+              onChange={handleFilterChange}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="jobnote">Job Note (Exact)</label>
+            <input
+              type="text"
+              id="jobnote"
+              name="jobnote"
+              className="form-control"
+              placeholder="Search by job note..."
+              value={searchFilters.jobnote}
+              onChange={handleFilterChange}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="location">Location</label>
+            <input
+              type="text"
+              id="location"
+              name="location"
+              className="form-control"
+              placeholder="Search by location..."
+              value={searchFilters.location}
+              onChange={handleFilterChange}
+            />
+          </div>
           <hr />
           <h5>Select Columns</h5>
           <div className="filter-container" style={{ maxHeight: '400px', overflowY: 'auto' }}>

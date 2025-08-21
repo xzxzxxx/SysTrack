@@ -116,7 +116,7 @@ const allowedSortColumns = {
 router.get('/', async (req, res) => {
   try{
     // Destructure all possible query parameters
-    const { search, page = 1, limit = 50, project_id, statuses, jobnote } = req.query;
+    const { page = 1, limit = 50, project_id, statuses, jobnote, contract_name, client_name, location  } = req.query;
     const offset = (page - 1) * limit;
 
     // Base query with all necessary joins
@@ -134,15 +134,17 @@ router.get('/', async (req, res) => {
     // --- Dynamically build WHERE conditions ---
 
     // 1. Handle search term
-    if (search) {
-      values.push(`%${search}%`);
-      conditions.push(`(
-        c.contract_name ILIKE $${values.length} OR
-        cl.client_name ILIKE $${values.length} OR
-        c.jobnote ILIKE $${values.length} OR
-        u.username ILIKE $${values.length} OR
-        c.location ILIKE $${values.length}
-      )`);
+    if (contract_name) {
+      values.push(`%${contract_name}%`);
+      conditions.push(`c.contract_name ILIKE $${values.length}`);
+    }
+    if (client_name) {
+      values.push(`%${client_name}%`);
+      conditions.push(`cl.client_name ILIKE $${values.length}`);
+    }
+    if (location) {
+      values.push(`%${location}%`);
+      conditions.push(`c.location ILIKE $${values.length}`);
     }
 
     // 2. Handle project_id filter
@@ -154,7 +156,7 @@ router.get('/', async (req, res) => {
     if (jobnote) {
       values.push(jobnote);
       conditions.push(`c.jobnote = $${values.length}`);
-  }
+    }
 
     // 3. Handle statuses filter
     if (statuses) {
