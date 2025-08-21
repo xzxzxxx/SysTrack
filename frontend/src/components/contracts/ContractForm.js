@@ -12,7 +12,7 @@ const initialContractState = {
   user_id: '',
   start_date: '',
   end_date: '',
-  client: '',
+  //client: '',
   alias: '',
   jobnote: '',
   sales: '',
@@ -29,7 +29,7 @@ const initialContractState = {
   period: '',
   response_time: '',
   service_time: '',
-  spare_parts_provider: '',
+  spare_part_provider: '',
   project_id: null
 };
 
@@ -48,7 +48,7 @@ function ContractForm({ token, defaultType = 'new' }) {
     period: '',
     response_time: '',
     service_time: '',
-    spare_parts_provider: '',
+    spare_part_provider: '',
     preventive: ''
   });
 
@@ -57,7 +57,7 @@ function ContractForm({ token, defaultType = 'new' }) {
     period: false,
     response_time: false,
     service_time: false,
-    spare_parts_provider: false,
+    spare_part_provider: false,
     preventive: false
   });
 
@@ -128,14 +128,14 @@ function ContractForm({ token, defaultType = 'new' }) {
         period: selectedContract.period && !['8*5', '24*5'].includes(selectedContract.period) ? selectedContract.period : '',
         response_time: selectedContract.response_time && !['4hrs', '8hrs'].includes(selectedContract.response_time) ? selectedContract.response_time : '',
         service_time: selectedContract.service_time && !['NBD', '48hrs'].includes(selectedContract.service_time) ? selectedContract.service_time : '',
-        spare_parts_provider: selectedContract.spare_parts_provider && !['cwc', 'client'].includes(selectedContract.spare_parts_provider) ? selectedContract.spare_parts_provider : '',
+        spare_part_provider: selectedContract.spare_part_provider && !['cwc', 'client'].includes(selectedContract.spare_part_provider) ? selectedContract.spare_part_provider : '',
         preventive: selectedContract.preventive && !['Bi-monthly', 'Quarterly', 'Yearly', 'Twice a Year'].includes(selectedContract.preventive) ? selectedContract.preventive : ''
       });
       setCustomSelected({
         period: selectedContract.period && !['8*5', '24*5'].includes(selectedContract.period),
         response_time: selectedContract.response_time && !['4hrs', '8hrs'].includes(selectedContract.response_time),
         service_time: selectedContract.service_time && !['NBD', '48hrs'].includes(selectedContract.service_time),
-        spare_parts_provider: selectedContract.spare_parts_provider && !['cwc', 'client'].includes(selectedContract.spare_parts_provider),
+        spare_part_provider: selectedContract.spare_part_provider && !['cwc', 'client'].includes(selectedContract.spare_part_provider),
         preventive: selectedContract.preventive && !['Bi-monthly', 'Quarterly', 'Yearly', 'Twice a Year'].includes(selectedContract.preventive)
       });
       setToast({ show: true, message: 'Contract loaded successfully', type: 'success' });
@@ -191,21 +191,21 @@ function ContractForm({ token, defaultType = 'new' }) {
           period: contractData.period || '',
           response_time: contractData.response_time || '',
           service_time: contractData.service_time || '',
-          spare_parts_provider: contractData.spare_parts_provider || '',
+          spare_part_provider: contractData.spare_part_provider || '',
           project_id: contractData.project_id || null
         });
         setCustomInputs({
           period: contractData.period && !['8*5', '24*5'].includes(contractData.period) ? contractData.period : '',
           response_time: contractData.response_time && !['4hrs', '8hrs'].includes(contractData.response_time) ? contractData.response_time : '',
           service_time: contractData.service_time && !['NBD', '48hrs'].includes(contractData.service_time) ? contractData.service_time : '',
-          spare_parts_provider: contractData.spare_parts_provider && !['cwc', 'client'].includes(contractData.spare_parts_provider) ? contractData.spare_parts_provider : '',
+          spare_part_provider: contractData.spare_part_provider && !['cwc', 'client'].includes(contractData.spare_part_provider) ? contractData.spare_part_provider : '',
           preventive: contractData.preventive && !['Bi-monthly', 'Quarterly', 'Yearly', 'Twice a Year'].includes(contractData.preventive) ? contractData.preventive : ''
         });
         setCustomSelected({
           period: contractData.period && !['8*5', '24*5'].includes(contractData.period),
           response_time: contractData.response_time && !['4hrs', '8hrs'].includes(contractData.response_time),
           service_time: contractData.service_time && !['NBD', '48hrs'].includes(contractData.service_time),
-          spare_parts_provider: contractData.spare_parts_provider && !['cwc', 'client'].includes(contractData.spare_parts_provider),
+          spare_part_provider: contractData.spare_part_provider && !['cwc', 'client'].includes(contractData.spare_part_provider),
           preventive: contractData.preventive && !['Bi-monthly', 'Quarterly', 'Yearly', 'Twice a Year'].includes(contractData.preventive)
         });
       } catch (err) {
@@ -313,14 +313,14 @@ function ContractForm({ token, defaultType = 'new' }) {
       period: selectedContract.period && !['8*5', '24*5'].includes(selectedContract.period) ? selectedContract.period : '',
       response_time: selectedContract.response_time && !['4hrs', '8hrs'].includes(selectedContract.response_time) ? selectedContract.response_time : '',
       service_time: selectedContract.service_time && !['NBD', '48hrs'].includes(selectedContract.service_time) ? selectedContract.service_time : '',
-      spare_parts_provider: selectedContract.spare_parts_provider && !['cwc', 'client'].includes(selectedContract.spare_parts_provider) ? selectedContract.spare_parts_provider : '',
+      spare_part_provider: selectedContract.spare_part_provider && !['cwc', 'client'].includes(selectedContract.spare_part_provider) ? selectedContract.spare_part_provider : '',
       preventive: selectedContract.preventive && !['Bi-monthly', 'Quarterly', 'Yearly', 'Twice a Year'].includes(selectedContract.preventive) ? selectedContract.preventive : ''
     });
     setCustomSelected({
       period: selectedContract.period && !['8*5', '24*5'].includes(selectedContract.period),
       response_time: selectedContract.response_time && !['4hrs', '8hrs'].includes(selectedContract.response_time),
       service_time: selectedContract.service_time && !['NBD', '48hrs'].includes(selectedContract.service_time),
-      spare_parts_provider: selectedContract.spare_parts_provider && !['cwc', 'client'].includes(selectedContract.spare_parts_provider),
+      spare_part_provider: selectedContract.spare_part_provider && !['cwc', 'client'].includes(selectedContract.spare_part_provider),
       preventive: selectedContract.preventive && !['Bi-monthly', 'Quarterly', 'Yearly', 'Twice a Year'].includes(selectedContract.preventive)
     });
     setToast({ show: true, message: 'Contract loaded successfully', type: 'success' });
@@ -482,7 +482,7 @@ function ContractForm({ token, defaultType = 'new' }) {
           <label className="form-check-label">{option}</label>
         </div>
       ))}
-      {['period', 'response_time', 'service_time', 'spare_parts_provider', 'preventive'].includes(name) && (
+      {['period', 'response_time', 'service_time', 'spare_part_provider', 'preventive'].includes(name) && (
         <div className="form-check">
           <input
             type="radio"
@@ -555,21 +555,21 @@ function ContractForm({ token, defaultType = 'new' }) {
                 period: '',
                 response_time: '',
                 service_time: '',
-                spare_parts_provider: '',
+                spare_part_provider: '',
                 project_id: null
               });
               setCustomInputs({
                 period: '',
                 response_time: '',
                 service_time: '',
-                spare_parts_provider: '',
+                spare_part_provider: '',
                 preventive: ''
               });
               setCustomSelected({
                 period: false,
                 response_time: false,
                 service_time: false,
-                spare_parts_provider: false,
+                spare_part_provider: false,
                 preventive: false
               });
               setContractNameSearch('');
@@ -605,21 +605,21 @@ function ContractForm({ token, defaultType = 'new' }) {
                 period: '',
                 response_time: '',
                 service_time: '',
-                spare_parts_provider: '',
+                spare_part_provider: '',
                 project_id: null
               });
               setCustomInputs({
                 period: '',
                 response_time: '',
                 service_time: '',
-                spare_parts_provider: '',
+                spare_part_provider: '',
                 preventive: ''
               });
               setCustomSelected({
                 period: false,
                 response_time: false,
                 service_time: false,
-                spare_parts_provider: false,
+                spare_part_provider: false,
                 preventive: false
               });
               setContractNameSearch('');
@@ -918,7 +918,7 @@ function ContractForm({ token, defaultType = 'new' }) {
                 {renderRadioGroup('service_time', <>Service Time<span className="text-danger">*</span></>, ['NBD', '48hrs'])}
               </div>
               <div className="col-md-6">
-                {renderRadioGroup('spare_parts_provider', 'Spare Parts Provider', ['cwc', 'client'])}
+                {renderRadioGroup('spare_part_provider', 'Spare Parts Provider', ['cwc', 'client'])}
                 {renderRadioGroup('preventive', 'Preventive', ['Bi-monthly', 'Quarterly', 'Yearly', 'Twice a Year'])}
               </div>
             </div>

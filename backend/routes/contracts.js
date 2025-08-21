@@ -307,7 +307,6 @@ router.post('/', async (req, res) => {
     user_id,
     start_date,
     end_date,
-    client,
     alias,
     jobnote,
     sales,
@@ -324,7 +323,7 @@ router.post('/', async (req, res) => {
     period,
     response_time,
     service_time,
-    spare_parts_provider,
+    spare_part_provider,
     project_id
   } = req.body;
 
@@ -366,10 +365,10 @@ router.post('/', async (req, res) => {
     const result = await pool.query(
       `INSERT INTO Contracts (
         client_id, user_id, start_date, end_date, client_code, renew_code,
-        client, alias, jobnote, sales, contract_name, location, category,
+        alias, jobnote, sales, contract_name, location, category,
         t1, t2, t3, preventive, report, other, remarks,
-        period, response_time, service_time, spare_parts_provider, project_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
+        period, response_time, service_time, spare_part_provider, project_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
       RETURNING *`,
       [
         client_id,
@@ -378,7 +377,6 @@ router.post('/', async (req, res) => {
         end_date,
         client_code,
         renew_code,
-        client || null,
         alias || null,
         jobnote,
         sales || null,
@@ -395,7 +393,7 @@ router.post('/', async (req, res) => {
         period || null,
         response_time || null,
         service_time || null,
-        spare_parts_provider || null,
+        spare_part_provider || null,
         project_id || null
       ]
     );
@@ -425,7 +423,6 @@ router.put('/:contract_id', async (req, res) => {
     user_id,
     start_date,
     end_date,
-    client,
     alias,
     jobnote,
     sales,
@@ -442,7 +439,7 @@ router.put('/:contract_id', async (req, res) => {
     period,
     response_time,
     service_time,
-    spare_parts_provider,
+    spare_part_provider,
     project_id
   } = req.body;
 
@@ -472,18 +469,17 @@ router.put('/:contract_id', async (req, res) => {
     const result = await pool.query(
       `UPDATE Contracts SET
         client_id = $1, user_id = $2, start_date = $3, end_date = $4,
-        client = $5, alias = $6, jobnote = $7, sales = $8, contract_name = $9,
-        location = $10, category = $11, t1 = $12, t2 = $13, t3 = $14,
-        preventive = $15, report = $16, other = $17,
-        remarks = $18, period = $19, response_time = $20, service_time = $21,
-        spare_parts_provider = $22, project_id = $23
-      WHERE contract_id = $24 RETURNING *`,
+        alias = $5, jobnote = $6, sales = $7, contract_name = $8,
+        location = $9, category = $10, t1 = $11, t2 = $12, t3 = $13,
+        preventive = $14, report = $15, other = $16,
+        remarks = $17, period = $18, response_time = $19, service_time = $20,
+        spare_part_provider = $21, project_id = $22
+      WHERE contract_id = $23 RETURNING *`,
       [
         client_id,
         user_id,
         start_date,
         end_date,
-        client || null,
         alias || null,
         jobnote,
         sales || null,
@@ -500,7 +496,7 @@ router.put('/:contract_id', async (req, res) => {
         period || null,
         response_time || null,
         service_time || null,
-        spare_parts_provider || null,
+        spare_part_provider || null,
         project_id || null,
         contract_id
       ]
