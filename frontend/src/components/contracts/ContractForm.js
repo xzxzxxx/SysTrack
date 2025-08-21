@@ -167,13 +167,12 @@ function ContractForm({ token, defaultType = 'new' }) {
         const response = await api.get(`/contracts/${contract_id}`);
         const contractData = response.data;
         // Format dates to YYYY-MM-DD for <input type="date">
-        const formatDate = (date) => date ? new Date(date).toISOString().split('T')[0] : '';
         setContract({
           ...contractData,
           client_id: contractData.client_id || '',
           user_id: contractData.user_id || '',
-          start_date: formatDate(contractData.start_date),
-          end_date: formatDate(contractData.end_date),
+          start_date: contractData.start_date ? contractData.start_date.substring(0, 10) : '',
+          end_date: contractData.end_date ? contractData.end_date.substring(0, 10) : '',
           client: contractData.client || '',
           alias: contractData.alias || '',
           jobnote: contractData.jobnote || '',

@@ -103,6 +103,7 @@ function ContractList({ token }) {
 
         const response = await api.get('/contracts', { params });
         const data = response.data.data;
+        console.log('Fetched contracts:', data);
         if (projectId && data.length === 0) {
           setShowNoContractsPopup(true);
         } else {
@@ -459,7 +460,7 @@ const isDefaultSort = JSON.stringify(sortConfigs) === JSON.stringify([{ key: 'co
                             }}
                           >
                             {['start_date', 'end_date', 'created_at'].includes(key) ? (
-                              contract[key] ? new Date(contract[key]).toISOString().split('T')[0] : '-'
+                              contract[key] ? contract[key].substring(0, 10) : '-'
                             ) : key === 'contract_status' ? (
                               <span className={`badge ${statusColors[contract.contract_status] || 'bg-light text-dark'}`}>
                                 {contract.contract_status || '-'}

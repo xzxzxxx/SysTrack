@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
+//fk time zone
+types.setTypeParser(1082, val => val);
 
 // Mapping for category to two-letter code
 const categoryMap = {
