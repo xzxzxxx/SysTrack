@@ -7,34 +7,40 @@ import debounce from 'lodash.debounce';
 import AsyncSelect from 'react-select/async';
 import CreationModal from '../common/CreationModal';
 
+const initialContractState = {
+  client_id: '',
+  user_id: '',
+  start_date: '',
+  end_date: '',
+  client: '',
+  alias: '',
+  jobnote: '',
+  sales: '',
+  contract_name: '',
+  location: '',
+  category: '',
+  t1: '',
+  t2: '',
+  t3: '',
+  preventive: '',
+  report: '',
+  other: '',
+  remarks: '',
+  period: '',
+  response_time: '',
+  service_time: '',
+  spare_parts_provider: '',
+  project_id: null
+};
+
 // Component to create, renew, or edit contracts
 function ContractForm({ token, defaultType = 'new' }) {
   // State to store form data for the contract
   const [contract, setContract] = useState({
-    client_id: '',
-    user_id: '',
-    start_date: '',
-    end_date: '',
-    client: '',
-    alias: '',
-    jobnote: '',
-    sales: '',
-    contract_name: '',
-    location: '',
-    category: '',
-    t1: '',
-    t2: '',
-    t3: '',
-    preventive: '',
-    report: '',
-    other: '',
-    remarks: '',
-    // Pre-fill these values only when creating a new contract
+    ...initialContractState,
     period: defaultType === 'new' ? '8*5' : '',
     response_time: defaultType === 'new' ? '4hrs' : '',
     service_time: defaultType === 'new' ? 'NBD' : '',
-    spare_parts_provider: '',
-    project_id: null
   });
 
   // State for custom input fields when "Custom" radio is selected
@@ -112,6 +118,7 @@ function ContractForm({ token, defaultType = 'new' }) {
       // Auto-fill form with selected contract, clearing jobnote, start_date, end_date
       const selectedContract = response.data.data[0];
       setContract({
+        ...initialContractState,
         ...selectedContract,
         jobnote: '',
         start_date: '',
@@ -159,7 +166,6 @@ function ContractForm({ token, defaultType = 'new' }) {
       try {
         const response = await api.get(`/contracts/${contract_id}`);
         const contractData = response.data;
-        console.log('Fetched contract data:', contractData); // Debug API response
         // Format dates to YYYY-MM-DD for <input type="date">
         const formatDate = (date) => date ? new Date(date).toISOString().split('T')[0] : '';
         setContract({
@@ -213,22 +219,24 @@ function ContractForm({ token, defaultType = 'new' }) {
   }, [contract_id, token]);
 
   // Load clients async with search
-  const loadClientOptions = async (inputValue, callback) => {
+  const loadClientOptions = useCallback(async (inputValue, callback) => {
     if (!inputValue) return callback([]);
     try {
+      const params = { name_search: inputValue, limit: 50 };
       const response = await api.get('/clients', {
-        params: { search: inputValue, limit: 50 }
+        params: { name_search: inputValue, limit: 50 }
       });
       const options = response.data.data.map(client => ({
         value: client.client_id,
         label: `${client.client_name} (${client.dedicated_number})`
       }));
-      callback(options);
+      return options;
+
     } catch (err) {
       setToast({ show: true, message: 'Failed to load clients', type: 'danger' });
-      callback([]);
+      return [];
     }
-  };
+  }, [setToast]);
 
   // Load projects async with search
   const loadProjectOptions = async (inputValue, callback) => {
@@ -295,6 +303,7 @@ function ContractForm({ token, defaultType = 'new' }) {
     if (!option) return;
     const selectedContract = option.contract;
     setContract({
+      ...initialContractState,
       ...selectedContract,
       jobnote: '',
       start_date: '',
@@ -680,7 +689,7 @@ function ContractForm({ token, defaultType = 'new' }) {
                   <div className="input-group">
                     <AsyncSelect
                       cacheOptions
-                      loadOptions={debounce(loadClientOptions, 300)} // Use your existing debounce
+                      loadOptions={loadClientOptions}
                       defaultOptions // Pre-load some if needed
                       placeholder="Search clients..."
                       isClearable
@@ -700,6 +709,8 @@ function ContractForm({ token, defaultType = 'new' }) {
                           dedicated_number: selected ? selected.label.match(/\(([^)]+)\)/)?.[1] || '' : ''
                         }));
                       }}
+                      menuPortalTarget={document.body}
+                      styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
                     />
                     <button
                       type="button"
@@ -786,7 +797,7 @@ function ContractForm({ token, defaultType = 'new' }) {
                       className="flex-grow-1"
                       classNamePrefix="select"
                       cacheOptions
-                      loadOptions={debounce(loadProjectOptions, 300)}
+                      loadOptions={loadProjectOptions}
                       defaultOptions
                       placeholder="Search projects..."
                       isClearable
@@ -800,6 +811,8 @@ function ContractForm({ token, defaultType = 'new' }) {
                           label: contract.project_name || `Project ${contract.project_id}` 
                         } : null
                       }
+                      menuPortalTarget={document.body}
+                      styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
                     />
                     <button
                       type="button"

@@ -9,8 +9,7 @@ const pool = new Pool({
 // Get all clients (updated to include dynamic counts)
 router.get('/', async (req, res) => {
 
-  console.log('Received search request with query:', req.query);
-  const { search, sortBy, sortOrder, page = 1, limit = 50 } = req.query;
+  const { search, sortBy, sortOrder, page = 1, limit = 50, name_search } = req.query;
   const offset = (page - 1) * parseInt(limit);
 
   // --- Start of refactored logic ---
@@ -18,17 +17,26 @@ router.get('/', async (req, res) => {
   const countParams = [];
   let whereClause = '';
 
+  // only for dropdown search
+  if (name_search) {
+
+    const searchTerm = `%${name_search}%`;
+    whereClause = ' WHERE client_name ILIKE $1';
+    dataParams.push(searchTerm);
+    countParams.push(searchTerm);
+  } 
+
   // Handle the search parameter for both queries
-  if (search) {
-      // The search term for ILIKE (case-insensitive)
-      const searchTerm = `%${search}%`;
-      
-      // Use $1 as a placeholder for the search term
-      whereClause = ' WHERE client_name ILIKE $1 OR dedicated_number ILIKE $1 OR email ILIKE $1';
-      
-      // Add the search term to both parameter arrays
-      dataParams.push(searchTerm);
-      countParams.push(searchTerm);
+  else if (search) {
+    // The search term for ILIKE (case-insensitive)
+    const searchTerm = `%${search}%`;
+    
+    // Use $1 as a placeholder for the search term
+    whereClause = ' WHERE client_name ILIKE $1 OR dedicated_number ILIKE $1 OR email ILIKE $1';
+    
+    // Add the search term to both parameter arrays
+    dataParams.push(searchTerm);
+    countParams.push(searchTerm);
   }
   // --- End of search logic ---
 
@@ -58,20 +66,12 @@ router.get('/', async (req, res) => {
       SELECT COUNT(*) FROM Clients
       ${whereClause}
   `;
-
   try {
       const [dataResult, countResult] = await Promise.all([
           // Execute queries with their respective, separate parameter arrays
           pool.query(dataQuery, dataParams),
           pool.query(countQuery, countParams),
       ]);
-
-      // *** ADD THIS BLOCK FOR DEBUGGING ***
-      if (dataResult.rows.length > 0) {
-        console.log('First client object fetched from DB:', dataResult.rows[0]);
-      }
-      // *** END OF DEBUGGING BLOCK ***
-
       res.json({
           data: dataResult.rows,
           total: parseInt(countResult.rows[0].count, 10),
