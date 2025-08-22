@@ -39,7 +39,6 @@ const PrivateRoute = ({ children, token, logout, ...rest }) => {
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '');
-
   const logout = () => {
     setToken('');
     localStorage.removeItem('token');
@@ -52,7 +51,7 @@ function App() {
       try {
         const decodedToken = jwtDecode(storedToken);
         const currentTime = Date.now() / 1000; // Get current time in seconds
-
+        console.log(Date.now());
         // If the token's expiration time is in the past, log the user out
         if (decodedToken.exp < currentTime) {
           console.log('Token has expired, logging out.');

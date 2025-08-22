@@ -17,20 +17,30 @@ const verifyToken = (req, res, next) => {
     const tokenLifetime = decoded.exp - decoded.iat;
     const timeRemaining = decoded.exp - nowInSeconds;
 
-    // Refresh if the token has less than half its lifetime remaining
-    // (e.g., for a 1-hour token, refresh if less than 30 minutes are left)
-    if (timeRemaining < tokenLifetime / 8 && timeRemaining > 0) {
-      // Create a new payload without the old 'iat' and 'exp' fields
-      const newPayload = {
-        userId: decoded.userId,
-        email: decoded.email,
-        // Add any other user data you originally put in the token
-      };
+    console.log('Server current time:', new Date(nowInSeconds * 1000).toUTCString());
+    console.log('Token iat:', decoded.iat, 'exp:', decoded.exp);
+    console.log('Calculated timeRemaining:', timeRemaining, 'tokenLifetime / 8:', tokenLifetime / 8);
+    console.log('Response Headers after refresh:', res.getHeaders());
 
-      const newToken = jwt.sign(newPayload, process.env.JWT_SECRET, { expiresIn: '4h' });
-      
-      // Send the new token back in a custom header
-      res.setHeader('X-Refreshed-Token', newToken);
+    // Refresh if the token has less than half its lifetime remaining
+    // (e.g., for a 4-hour token, refresh if less than 30 minutes are left)
+    if (timeRemaining < tokenLifetime / 8 && timeRemaining > 0) {
+      // Prevent multiple header sets in the same response
+      console.log('Refreshing token...');
+      if (!res.headersSent) {
+        // Create a new payload without the old 'iat' and 'exp' fields
+        const newPayload = {
+          userId: decoded.userId,
+          email: decoded.email,
+        };
+
+        const newToken = jwt.sign(newPayload, process.env.JWT_SECRET, { expiresIn: '4h' });
+        
+        // Send the new token back in a custom header (lowercase for consistency)
+        res.setHeader('x-refreshed-token', newToken);
+        console.log('Token refreshed successfully');
+        console.log('New token:', newToken);
+      }
     }
     // --- END of Token Refresh Logic ---
 

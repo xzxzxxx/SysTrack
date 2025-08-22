@@ -15,14 +15,9 @@ function Dashboard({ token }) {
     const fetchStats = async () => {
       setLoading(true);
       try {
-        const [clientsRes, contractsRes] = await Promise.all([
-          api.get('/clients'),
-          api.get('/contracts')
-        ]);
-        const expiringRes = await api.get('/contracts', {
-          params: { status: 'expiring_soon' } // borken here, but not coursing bug, i have updated the frontend to handle stuats selection
-        });
-
+        const clientsRes = await api.get('/clients');
+        const contractsRes = await api.get('/contracts');
+        const expiringRes = await api.get('/contracts?expiring=true');
         setStats({
           clients: clientsRes.data.total,
           contracts: contractsRes.data.total,

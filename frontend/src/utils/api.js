@@ -1,9 +1,20 @@
 import axios from 'axios';
+import { jwtDecode } from 'jwt-decode';
 
 // Create a new Axios instance with a base URL
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3000/api',
 });
+
+// --- Token Refresh Queue Mechanism ---
+let isRefreshing = false;
+let refreshSubscribers = [];
+
+// Function to notify all subscribers when refresh is done
+function onRefreshed(newToken) {
+  refreshSubscribers.forEach((cb) => cb(newToken));
+  refreshSubscribers = [];
+}
 
 // --- Request Interceptor ---
 // This runs BEFORE each request is sent.
@@ -27,11 +38,39 @@ api.interceptors.response.use(
   (response) => {
     // Check for our custom token refresh header
     const newToken = response.headers['x-refreshed-token'];
+    console.log('Received newToken:', newToken);
     if (newToken) {
-      console.log('Token refreshed successfully');
-      // Silently update the token in localStorage
-      localStorage.setItem('token', newToken);
-      window.dispatchEvent(new Event('token-updated'));
+      try {
+        const decoded = jwtDecode(newToken);
+        const currentTime = Date.now() / 1000;
+        if (decoded.exp < currentTime) {
+          console.error('Expired newToken received! Ignoring.');
+          return response;
+        }
+      } catch (err) {
+        console.error('Invalid newToken:', err);
+        return response;
+      }
+      if (!isRefreshing) {
+        // First one to refresh: update storage and notify
+        isRefreshing = true;
+        console.log('Token refreshed successfully');
+        localStorage.setItem('token', newToken);
+        window.dispatchEvent(new Event('token-updated'));
+        onRefreshed(newToken);
+        isRefreshing = false;
+      } else {
+        // Others wait in queue
+        return new Promise((resolve) => {
+          refreshSubscribers.push(() => {
+            // Once refreshed, update their config with new token if needed
+            if (response.config) {
+              response.config.headers['Authorization'] = `Bearer ${newToken}`;
+            }
+            resolve(response);
+          });
+        });
+      }
     }
     return response;
   },
