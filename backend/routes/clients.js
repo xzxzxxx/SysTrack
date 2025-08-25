@@ -6,6 +6,39 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
 
+// This route is specifically designed to be called by AsyncSelect components.
+router.get('/lookup', async (req, res) => {
+  // Get the search term from the query string, e.g., /lookup?search=some_name
+  const { search } = req.query;
+  
+  try {
+    // This is a simple and fast query, perfect for a typeahead search.
+    let query = `
+      SELECT client_id, client_name 
+      FROM Clients
+    `;
+    const values = [];
+
+    if (search) {
+      // If a search term is provided, filter by client name or their dedicated number.
+      // ILIKE is case-insensitive.
+      query += ' WHERE client_name ILIKE $1 OR dedicated_number ILIKE $1';
+      values.push(`%${search}%`);
+    }
+
+    // Always order by name and limit the results to keep the UI responsive.
+    query += ' ORDER BY client_name LIMIT 20'; 
+
+    const result = await pool.query(query, values);
+    
+    // Return the results as a simple JSON array.
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error in client lookup:', err.stack);
+    res.status(500).json({ error: 'Server error while fetching client lookup data' });
+  }
+});
+
 // Get all clients (updated to include dynamic counts)
 router.get('/', async (req, res) => {
 

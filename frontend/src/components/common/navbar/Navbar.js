@@ -42,10 +42,10 @@ function Navbar({ token, logout, isOpen, setIsOpen }) {
             <Link className="nav-link" to="/projects">Projects</Link>
           </li>
           <li className="nav-item ps-4">
-            <Link className="nav-link" to="/contracts/notify">Notify Renewals</Link>
+            <Link className="nav-link" to="/notifications">Notify Renewals</Link>
           </li>
           <li className="nav-item ps-4">
-            <Link className="nav-link" to="/dashboard">Maintenance Records</Link>
+            <Link className="nav-link" to="/maintenance">Maintenance Records</Link>
           </li>
         </ul>
         <div className="sidebar-footer">

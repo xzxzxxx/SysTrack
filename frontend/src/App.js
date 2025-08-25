@@ -11,6 +11,8 @@ import ContractForm from './components/contracts/ContractForm';
 import Dashboard from './components/dashboard/Dashboard';
 import Projects from './components/projects/Projects';
 import NotificationReview from './components/contracts/NotificationReview';
+import MaintenanceRequestList from './components/maintenance/MaintenanceRequestList';
+import MaintenanceRequestForm from './components/maintenance/MaintenanceRequestForm';
 import Settings from './components/Settings';
 
 // A simple component to handle routes that require authentication
@@ -92,44 +94,54 @@ function App() {
         </Route>
 
         {/* Private routes - they are all protected by PrivateRoute */}
-        <PrivateRoute path="/dashboard" token={token} logout={logout}>
-          <Dashboard token={token} />
-        </PrivateRoute>
-        <PrivateRoute path="/clients/new" token={token} logout={logout}>
-          <ClientForm token={token} />
-        </PrivateRoute>
-        <PrivateRoute path="/clients/:id/edit" token={token} logout={logout}>
-          <ClientForm token={token} />
-        </PrivateRoute>
-        <PrivateRoute path="/clients" token={token} logout={logout}>
-          <ClientList token={token} />
-        </PrivateRoute>
-        <PrivateRoute path="/contracts/notify" token={token} logout={logout}>
-          <NotificationReview token={token} />
-        </PrivateRoute>
-        <PrivateRoute path="/contracts/new" token={token} logout={logout}>
-          <ContractForm token={token} defaultType="new" />
-        </PrivateRoute>
-        <PrivateRoute path="/contracts/renew" token={token} logout={logout}>
-          <ContractForm token={token} defaultType="renew" />
-        </PrivateRoute>
-        <PrivateRoute path="/contracts/:contract_id/edit" token={token} logout={logout}>
-          <ContractForm token={token} />
-        </PrivateRoute>
-        <PrivateRoute path="/contracts" token={token} logout={logout}>
-          <ContractList token={token} />
-        </PrivateRoute>
-        <PrivateRoute path="/projects" token={token} logout={logout}>
-          <Projects token={token} />
+        <PrivateRoute path="/" token={token} logout={logout}>
+          <Switch>
+            <Route path="/dashboard">
+              <Dashboard token={token} />
+            </Route>
+            <Route path="/clients/new">
+              <ClientForm token={token} />
+            </Route>
+            <Route path="/clients/:id/edit">
+              <ClientForm token={token} />
+            </Route>
+            <Route path="/clients">
+              <ClientList token={token} />
+            </Route>
+            <Route path="/contracts/new">
+              <ContractForm token={token} />
+            </Route>
+            <Route path="/contracts/renew/:id">
+              <ContractForm token={token} isRenew={true} />
+            </Route>
+            <Route path="/contracts/:id/edit">
+              <ContractForm token={token} />
+            </Route>
+            <Route path="/contracts/notify">
+              <NotificationReview token={token} />
+            </Route>
+            <Route path="/contracts">
+              <ContractList token={token} />
+            </Route>
+            <Route path="/projects">
+              <Projects token={token} />
+            </Route>
+            <Route path="/maintenance/new">
+              <MaintenanceRequestForm token={token} />
+            </Route>
+            <Route path="/maintenance/:id/edit">
+              <MaintenanceRequestForm token={token} />
+            </Route>
+            <Route path="/maintenance">
+              <MaintenanceRequestList token={token} />
+            </Route>
+            
+            <Redirect from="/" to={token ? "/dashboard" : "/login"} />
+          </Switch>
         </PrivateRoute>
         <PrivateRoute path="/settings" token={token} logout={logout}>
           <Settings token={token} />
         </PrivateRoute>
-
-        {/* Redirect root path to the dashboard */}
-        <Route path="/">
-          {token ? <Redirect to="/dashboard" /> : <Redirect to="/login" />}
-        </Route>
       </Switch>
     </Router>
   );
