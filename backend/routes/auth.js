@@ -99,6 +99,37 @@ router.post('/approve-registration/:id', isAdmin, async (req, res) => {
   }
 });
 
+// change password
+router.post('/change-password', verifyToken, async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  const userId = req.user.userId;  // From decoded token
+
+  if (!oldPassword || !newPassword) {
+      return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+      const result = await pool.query('SELECT password_hash FROM Users WHERE user_id = $1', [userId]);
+      if (result.rows.length === 0) {
+          return res.status(404).json({ error: 'User not found' });
+      }
+
+      const user = result.rows[0];
+      const isValid = await bcrypt.compare(oldPassword, user.password_hash);
+      if (!isValid) {
+          return res.status(401).json({ error: 'Incorrect old password' });
+      }
+
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+      await pool.query('UPDATE Users SET password_hash = $1 WHERE user_id = $2', [hashedNewPassword, userId]);
+
+      res.status(200).json({ message: 'Password changed successfully' });
+  } catch (err) {
+      console.error(err.stack);
+      res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Login user
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;

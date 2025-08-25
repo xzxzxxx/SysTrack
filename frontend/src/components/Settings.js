@@ -10,6 +10,13 @@ function Settings() {
     const [user, setUser] = useState(null);  // Use state for user to avoid conditional issues
     const history = useHistory(); 
 
+    // Change password states
+    const [oldPassword, setOldPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [passwordError, setPasswordError] = useState('');
+    const [passwordSuccess, setPasswordSuccess] = useState('');
+
     // Decode user from token (if no user prop is passed)
     const token = localStorage.getItem('token');
     useEffect(() => {
@@ -62,6 +69,34 @@ function Settings() {
         }
     };
 
+    const handleChangePassword = async (e) => {
+        e.preventDefault();
+        setPasswordError('');
+        setPasswordSuccess('');
+
+        if (newPassword !== confirmPassword) {
+            setPasswordError('New passwords do not match');
+            return;
+        }
+        if (newPassword.length < 8) {
+            setPasswordError('New password must be at least 8 characters');
+            return;
+        }
+
+        try {
+            const response = await api.post('/auth/change-password', { oldPassword, newPassword });
+            if (response.status === 200) {
+                setPasswordSuccess('Password changed successfully');
+                // Optional: Clear form
+                setOldPassword('');
+                setNewPassword('');
+                setConfirmPassword('');
+            }
+        } catch (err) {
+            setPasswordError(err.response?.data?.error || 'Failed to change password');
+        }
+    };
+
     if (loading) return <p>Loading...</p>;
     if (error) return <p>Error: {error}</p>;
 
@@ -107,8 +142,38 @@ function Settings() {
 
             {/* Section for all users: Change password (placeholder) */}
             <h3>Change Password</h3>
-            {/* TODO: Implement change password form here */}
-            <p>(Coming soon: Enter old password, new password, and call backend API to update)</p>
+            <form onSubmit={handleChangePassword}>
+                <div>
+                    <label>Old Password:</label>
+                    <input
+                        type="password"
+                        value={oldPassword}
+                        onChange={(e) => setOldPassword(e.target.value)}
+                        required
+                    />
+                </div>
+                <div>
+                    <label>New Password:</label>
+                    <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        required
+                    />
+                </div>
+                <div>
+                    <label>Confirm New Password:</label>
+                    <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                    />
+                </div>
+                <button type="submit">Change Password</button>
+            </form>
+            {passwordError && <p style={{ color: 'red' }}>Error: {passwordError}</p>}
+            {passwordSuccess && <p style={{ color: 'green' }}>{passwordSuccess}</p>}
         </div>
     );
 }
