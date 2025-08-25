@@ -11,6 +11,7 @@ import ContractForm from './components/contracts/ContractForm';
 import Dashboard from './components/dashboard/Dashboard';
 import Projects from './components/projects/Projects';
 import NotificationReview from './components/contracts/NotificationReview';
+import Settings from './components/Settings';
 
 // A simple component to handle routes that require authentication
 const PrivateRoute = ({ children, token, logout, ...rest }) => {
@@ -51,7 +52,6 @@ function App() {
       try {
         const decodedToken = jwtDecode(storedToken);
         const currentTime = Date.now() / 1000; // Get current time in seconds
-        console.log(Date.now());
         // If the token's expiration time is in the past, log the user out
         if (decodedToken.exp < currentTime) {
           console.log('Token has expired, logging out.');
@@ -121,6 +121,9 @@ function App() {
         </PrivateRoute>
         <PrivateRoute path="/projects" token={token} logout={logout}>
           <Projects token={token} />
+        </PrivateRoute>
+        <PrivateRoute path="/settings" token={token} logout={logout}>
+          <Settings token={token} />
         </PrivateRoute>
 
         {/* Redirect root path to the dashboard */}

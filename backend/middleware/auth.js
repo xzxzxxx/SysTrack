@@ -17,11 +17,6 @@ const verifyToken = (req, res, next) => {
     const tokenLifetime = decoded.exp - decoded.iat;
     const timeRemaining = decoded.exp - nowInSeconds;
 
-    console.log('Server current time:', new Date(nowInSeconds * 1000).toUTCString());
-    console.log('Token iat:', decoded.iat, 'exp:', decoded.exp);
-    console.log('Calculated timeRemaining:', timeRemaining, 'tokenLifetime / 8:', tokenLifetime / 8);
-    console.log('Response Headers after refresh:', res.getHeaders());
-
     // Refresh if the token has less than half its lifetime remaining
     // (e.g., for a 4-hour token, refresh if less than 30 minutes are left)
     if (timeRemaining < tokenLifetime / 8 && timeRemaining > 0) {
