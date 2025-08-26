@@ -6,35 +6,45 @@ The application features automated code generation, advanced search and filterin
 
 ## Key Features
 
--   **Dashboard**: Provides a high-level overview of total clients, total contracts, and contracts that are expiring soon.
--   **Client Management**:
-    -   Full CRUD (Create, Read, Update, Delete) operations for clients.
-    -   Simplified client creation requiring only a name and an optional email.
-    -   **Auto-Generated Dedicated Numbers**: Unique client codes (e.g., `A01`, `X02`) are automatically generated based on the client's name.
-    -   **Dynamic Counts**: Order and renewal counts are calculated dynamically from the contracts table, ensuring data is always up-to-date.
--   **Contract Management**:
-    -   Full CRUD operations for contracts.
-    -   **Searchable Dropdowns**: `AsyncSelect` components allow for efficient, backend-powered searching of clients and projects when creating or editing contracts.
-    -   **Multi-Field Search**: A single search bar allows users to search across Contract Name, Client, Job Note, and Location simultaneously.
-    -   **Default SLA Pre-filling**: New contracts are automatically pre-filled with standard SLA values (`8x5` Period, `4hr` Response, `NBD` Service Time) to speed up data entry.
--   **Renewal Notification System**:
-    -   A dedicated review page allows users to see all expiring contracts and pre-selects un-renewed ones for action.
-    -   Users can uncheck contracts to exclude them from the notification.
-    -   An **Email Preview Modal** shows the exact email content before sending.
-    -   Sends a professionally formatted email with a dynamic subject line to the sales team via Nodemailer.
--   **Robust Authentication & Session Management**:
-    -   Secure user login and registration using JWT (JSON Web Tokens).
-    -   **Inactivity Timeout**: Users are automatically logged out after 15 minutes of inactivity for enhanced security.
-    -   **Sliding Sessions**: Active users remain logged in indefinitely thanks to a seamless, automatic token refresh mechanism.
+- **Dashboard**: Provides a high-level overview of total clients, total contracts, and contracts that are expiring soon.
+- **Client Management**:
+    - Full CRUD (Create, Read, Update, Delete) operations for clients.
+    - Simplified client creation requiring only a name and an optional email.
+    - **Auto-Generated Dedicated Numbers**: Unique client codes (e.g., `A01`, `X02`) are automatically generated based on the client's name.
+    - **Dynamic Counts**: Order and renewal counts are calculated dynamically from the contracts table, ensuring data is always up-to-date.
+    - Enhanced search by client name, dedicated number, ID, or email, with fixes for jobnote-related redirects.
+- **Contract Management**:
+    - Full CRUD operations for contracts.
+    - **Searchable Dropdowns**: `AsyncSelect` components allow for efficient, backend-powered searching of clients and projects when creating or editing contracts.
+    - **Multi-Field Search**: A single search bar allows users to search across Contract Name, Client, Job Note, and Location simultaneously, with debounce optimization (300ms).
+    - **Default SLA Pre-filling**: New contracts are automatically pre-filled with standard SLA values.
+    - Renewal tracking via `previous_contract` field, with auto-filling fixes for dedicated numbers.
+- **Renewal Notification System**:
+    - A dedicated review page allows users to see all expiring contracts and pre-selects un-renewed ones for action.
+    - Users can uncheck contracts to exclude them from the notification.
+    - An **Email Preview Modal** shows the exact email content before sending.
+    - Sends a professionally formatted email with a dynamic subject line to the sales team via Nodemailer.
+- **Robust Authentication & Session Management**:
+    - Secure user login and registration using JWT (JSON Web Tokens).
+    - **Inactivity Timeout**: Users are automatically logged out after 15 minutes of inactivity for enhanced security.
+    - **Sliding Sessions**: Active users remain logged in indefinitely thanks to a seamless, automatic token refresh mechanism. Resolved verification bugs.
+- **Project Management**:
+    - Paginated list of projects with search by name and links to related contracts.
+- **Maintenance Request Management** (In Development):
+    - Layout for listing and creating maintenance requests is finished, including search filters (e.g., by status, service code, client name), pagination, column customization with drag-and-drop, and sorting.
+    - Form supports async searchable dropdowns and radio button groups for fields like service type and warranty status.
+    - The function is still developing; core backend integration and full CRUD operations are in progress. Database and layout are finished.
+- **Additional Tools**:
+    - Reusable SearchBar component for real-time feedback.
 
 ## Tech Stack
 
--   **Frontend**: React.js, React Router, Bootstrap, Axios, `react-select`, `jwt-decode`, `lodash.debounce`
--   **Backend**: Node.js, Express.js, PostgreSQL, `pg` (node-postgres)
--   **Authentication**: `jsonwebtoken`, `bcrypt`
--   **Email**: `nodemailer`
--   **Testing**: `jest`, `supertest`
--   **Deployment**: Nginx (as reverse proxy), PM2 (as process manager)
+- **Frontend**: React.js, React Router, Bootstrap, Axios, `react-select`, `jwt-decode`, `lodash.debounce`, `@hello-pangea/dnd`
+- **Backend**: Node.js, Express.js, PostgreSQL, `pg` (node-postgres)
+- **Authentication**: `jsonwebtoken`, `bcrypt`
+- **Email**: `nodemailer`
+- **Testing**: `jest`, `supertest`
+- **Deployment**: Nginx (as reverse proxy), PM2 (as process manager)
 
 ## Setup Instructions
 
@@ -42,15 +52,14 @@ Follow these steps to set up and run the project on a local machine for developm
 
 ### Prerequisites
 
--   Node.js (v18.x or later)
--   npm
--   PostgreSQL
+- Node.js (v18.x or later)
+- npm
+- PostgreSQL
 
 ### 1. Backend Setup
 
-First, set up the Node.js server and connect it to the database.
+1. **Navigate to the backend directory:**
 
-1.  **Navigate to the backend directory:**
     ```
     cd backend
     ```
