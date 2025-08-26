@@ -135,12 +135,12 @@ function App() {
             <Route path="/maintenance">
               <MaintenanceRequestList token={token} />
             </Route>
+            <Route path="/settings">
+            <Settings token={token} />
+            </Route>
             
             <Redirect from="/" to={token ? "/dashboard" : "/login"} />
           </Switch>
-        </PrivateRoute>
-        <PrivateRoute path="/settings" token={token} logout={logout}>
-          <Settings token={token} />
         </PrivateRoute>
       </Switch>
     </Router>
