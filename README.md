@@ -6,7 +6,8 @@ The application features automated code generation, advanced search and filterin
 
 ## Key Features
 
-- **Dashboard**: Provides a high-level overview of total clients, total contracts, and contracts that are expiring soon.
+- **Dashboard**: 
+    - Provides a high-level      overview of total clients, total contracts, and contracts that are expiring soon.
 - **Client Management**:
     - Full CRUD (Create, Read, Update, Delete) operations for clients.
     - Simplified client creation requiring only a name and an optional email.

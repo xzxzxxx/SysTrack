@@ -72,7 +72,8 @@ function ContractForm({ token, defaultType = 'new' }) {
 
   // Router hooks for navigation and URL parameters
   const history = useHistory();
-  const { contract_id } = useParams();
+  const { id: contract_id } = useParams();
+
 
   // Debounced function to search contracts by contract_name (with optional jobnote filter)
   const fetchContractOptions = useCallback(
@@ -122,7 +123,9 @@ function ContractForm({ token, defaultType = 'new' }) {
         ...selectedContract,
         jobnote: '',
         start_date: '',
-        end_date: ''
+        end_date: '',
+        client_name: selectedContract.client_name || '',
+        project_name: selectedContract.project_name || ''
       });
       setCustomInputs({
         period: selectedContract.period && !['8*5', '24*5'].includes(selectedContract.period) ? selectedContract.period : '',
@@ -173,7 +176,7 @@ function ContractForm({ token, defaultType = 'new' }) {
           user_id: contractData.user_id || '',
           start_date: contractData.start_date ? contractData.start_date.substring(0, 10) : '',
           end_date: contractData.end_date ? contractData.end_date.substring(0, 10) : '',
-          client: contractData.client || '',
+          //client: contractData.client || '',
           alias: contractData.alias || '',
           jobnote: contractData.jobnote || '',
           sales: contractData.sales || '',
@@ -191,8 +194,11 @@ function ContractForm({ token, defaultType = 'new' }) {
           response_time: contractData.response_time || '',
           service_time: contractData.service_time || '',
           spare_part_provider: contractData.spare_part_provider || '',
-          project_id: contractData.project_id || null
+          project_id: contractData.project_id || null,
+          client_name: contractData.client_name || '',
+          project_name: contractData.project_name || ''
         });
+        console.log('Contract state set to:', contractData); // Debug log
         setCustomInputs({
           period: contractData.period && !['8*5', '24*5'].includes(contractData.period) ? contractData.period : '',
           response_time: contractData.response_time && !['4hrs', '8hrs'].includes(contractData.response_time) ? contractData.response_time : '',
@@ -221,7 +227,7 @@ function ContractForm({ token, defaultType = 'new' }) {
   const loadClientOptions = useCallback(async (inputValue, callback) => {
     if (!inputValue) return callback([]);
     try {
-      const params = { name_search: inputValue, limit: 50 };
+      //const params = { name_search: inputValue, limit: 50 };
       const response = await api.get('/clients', {
         params: { name_search: inputValue, limit: 50 }
       });
@@ -353,7 +359,7 @@ function ContractForm({ token, defaultType = 'new' }) {
     }
 
     // In renew mode, ensure at least one search field was used
-    if (contractType === 'renew' && !contractNameSearch && !jobnoteSearch) {
+    if (contractType === 'renew' && !contract.client_id) {
       setToast({
         show: true,
         message: 'Please search by contract name or job note to renew a contract',
@@ -687,16 +693,16 @@ function ContractForm({ token, defaultType = 'new' }) {
                   <label htmlFor="client_id">Client<span className="text-danger">*</span></label>
                   <div className="input-group">
                     <AsyncSelect
+                      key={`client-${contract.client_id}-${contractType}`}
                       cacheOptions
                       loadOptions={loadClientOptions}
-                      defaultOptions // Pre-load some if needed
                       placeholder="Search clients..."
                       isClearable
                       className="flex-grow-1"
-                      value={
+                      defaultValue={
                         contract.client_id && contract.client_name ? {
                           value: contract.client_id,
-                          label: `${contract.client_name} (${contract.dedicated_number || ''})`
+                          label: `${contract.client_name} (${contract.dedicated_number || 'N/A'})`
                         } : null
                       }
                       onChange={(selected) => {
@@ -793,18 +799,18 @@ function ContractForm({ token, defaultType = 'new' }) {
                   <div className="input-group">
                     <AsyncSelect
                       id="project_id"
+                      key={`project-${contract.project_id}-${contractType}`}
                       className="flex-grow-1"
                       classNamePrefix="select"
                       cacheOptions
                       loadOptions={loadProjectOptions}
-                      defaultOptions
                       placeholder="Search projects..."
                       isClearable
                       isDisabled={!contract.client_id} // Disable if no client is selected//for edit
                       onChange={handleProjectChange}
                       // This is the key to making Edit mode work correctly.
                       // It creates the { value, label } object that AsyncSelect needs.
-                      value={
+                      defaultValue={
                         contract.project_id ? { 
                           value: contract.project_id, 
                           label: contract.project_name || `Project ${contract.project_id}` 

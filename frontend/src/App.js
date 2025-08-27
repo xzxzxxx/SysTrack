@@ -108,13 +108,13 @@ function App() {
             <Route path="/clients">
               <ClientList token={token} />
             </Route>
-            <Route path="/contracts/new">
-              <ContractForm token={token} />
-            </Route>
             <Route path="/contracts/renew/:id">
               <ContractForm token={token} isRenew={true} />
             </Route>
             <Route path="/contracts/:id/edit">
+              <ContractForm token={token} />
+            </Route>
+            <Route path="/contracts/new">
               <ContractForm token={token} />
             </Route>
             <Route path="/contracts/notify">
