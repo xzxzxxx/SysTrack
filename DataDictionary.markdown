@@ -83,9 +83,9 @@ Stores contract details, SLA information, and service agreements.
 | start_date | date | - | NULLABLE | Contract start date |
 | end_date | date | - | NULLABLE | Contract expiration date |
 | remarks | text | - | NULLABLE | Additional notes or comments |
-| t1 | text | - | NULLABLE | Tier 1 support contact |
-| t2 | text | - | NULLABLE | Tier 2 support contact |
-| t3 | text | - | NULLABLE | Tier 3 support contact |
+| t1 | text | - | NULLABLE | 1st support ae |
+| t2 | text | - | NULLABLE | 2nd support ae  |
+| t3 | text | - | NULLABLE | 3rd support ae  |
 | period | text | - | NULLABLE | Service period (e.g., 8x5, 24x7) |
 | response_time | text | - | NULLABLE | SLA response time (e.g., 4hr) |
 | service_time | text | - | NULLABLE | SLA service time (e.g., NBD) |
