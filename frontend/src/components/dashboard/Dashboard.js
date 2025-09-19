@@ -2,10 +2,29 @@ import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
 import { Link } from 'react-router-dom';
 
+// helper to read session override (default 3)
+const readSessionExpiringMonths = () => {
+  const raw = sessionStorage.getItem('expiringMonthsOverride');
+  const m = raw ? parseInt(raw, 10) : 3;
+  return Number.isFinite(m) && m > 0 ? m : 3;
+};
+
 function Dashboard({ token }) {
   const [stats, setStats] = useState({ clients: 0, activePending: 0, expiring: 0, openMaintenance: 0 });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // expiring months for title
+  const [expMonths, setExpMonths] = useState(readSessionExpiringMonths());
+
+  useEffect(() => {
+    // listen for session override updates from Settings
+    const handler = (e) => {
+      setExpMonths(readSessionExpiringMonths());
+    };
+    window.addEventListener('expiring-months-updated', handler);
+    return () => window.removeEventListener('expiring-months-updated', handler);
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -36,6 +55,8 @@ function Dashboard({ token }) {
     };
     fetchStats();
   }, [token]);
+
+  const monthsLabel = `${expMonths} month${expMonths === 1 ? '' : 's'}`;
 
   if (!token) {
     return (
@@ -85,10 +106,11 @@ function Dashboard({ token }) {
             </div>
           </div>
         </div>
+        {/* Expiring Soon card with dynamic months in title */}
         <div className="col-md-3 col-12 mb-3">
           <div className="card shadow-sm">
             <div className="card-body">
-              <h5 className="card-title">Expiring Soon</h5>
+              <h5 className="card-title">Expiring Soon ({monthsLabel})</h5>
               <p className="card-text display-4">{stats.expiring}</p>
               <Link to="/contracts?status=expiringsoon" className="btn btn-primary">Check Expiring Soon</Link>
               <Link to="/contracts/notify" className="btn btn-light ml-2">Notify Team</Link>
