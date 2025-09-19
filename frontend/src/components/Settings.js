@@ -17,6 +17,43 @@ function Settings() {
     const [passwordError, setPasswordError] = useState('');
     const [passwordSuccess, setPasswordSuccess] = useState('');
 
+    // Helper to read initial months from session (default 3)
+    const readInitialExpiringMonths = () => {
+        const raw = sessionStorage.getItem('expiringMonthsOverride');
+        const m = raw ? parseInt(raw, 10) : 3;
+        return Number.isFinite(m) && m > 0 ? m : 3;
+    };
+    
+    const [expiringMonths, setExpiringMonths] = useState(readInitialExpiringMonths());
+    const [expToast, setExpToast] = useState({ show: false, type: '', message: '' });
+
+    // Keep local UI in sync if other parts update the session override
+    useEffect(() => {
+        const handler = () => {
+        const raw = sessionStorage.getItem('expiringMonthsOverride');
+        const m = raw ? parseInt(raw, 10) : 3;
+        setExpiringMonths(Number.isFinite(m) && m > 0 ? m : 3);
+        };
+        window.addEventListener('expiring-months-updated', handler);
+        return () => window.removeEventListener('expiring-months-updated', handler);
+    }, []);
+    
+    // Apply and reset handlers
+    const applySessionMonths = () => {
+        sessionStorage.setItem('expiringMonthsOverride', String(expiringMonths));
+        window.dispatchEvent(new CustomEvent('expiring-months-updated', { detail: { months: expiringMonths } }));
+        setExpToast({ show: true, type: 'success', message: `Expiring Soon window set to ${expiringMonths} month(s) for this session.` });
+        setTimeout(() => setExpToast({ show: false, type: '', message: '' }), 1800);
+    };
+    
+    const resetToDefault = () => {
+        sessionStorage.removeItem('expiringMonthsOverride');
+        window.dispatchEvent(new CustomEvent('expiring-months-updated', { detail: { months: 3 } }));
+        setExpiringMonths(3);
+        setExpToast({ show: true, type: 'secondary', message: 'Reset to default 3 months.' });
+        setTimeout(() => setExpToast({ show: false, type: '', message: '' }), 1200);
+    };
+
     // Decode user from token (if no user prop is passed)
     const token = localStorage.getItem('token');
     useEffect(() => {
@@ -172,6 +209,35 @@ function Settings() {
                 </div>
                 <button type="submit">Change Password</button>
             </form>
+            {/* Expiring Soon (Session Only) */}
+            <div className="card mb-4">
+            <div className="card-header">Expiring Soon (Session Only)</div>
+            <div className="card-body">
+                {expToast.show && <div className={`alert alert-${expToast.type}`}>{expToast.message}</div>}
+
+                <label className="mr-2">Window (months):</label>
+                <select
+                aria-label="Expiring Soon months window"
+                className="form-control d-inline-block"
+                style={{ width: 140 }}
+                value={expiringMonths}
+                onChange={(e) => setExpiringMonths(parseInt(e.target.value, 10))}
+                >
+                {[1, 2, 3, 4, 5, 6, 9, 12].map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                ))}
+                </select>
+
+                <div className="mt-3">
+                <button className="btn btn-primary mr-2" onClick={applySessionMonths}>Apply (Session Only)</button>
+                <button className="btn btn-secondary" onClick={resetToDefault}>Reset to 3</button>
+                </div>
+
+                <small className="text-muted d-block mt-2">
+                This override applies only in this browser tab and will reset to 3 months next time you open the app.
+                </small>
+            </div>
+            </div>
             {passwordError && <p style={{ color: 'red' }}>Error: {passwordError}</p>}
             {passwordSuccess && <p style={{ color: 'green' }}>{passwordSuccess}</p>}
         </div>

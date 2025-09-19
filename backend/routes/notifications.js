@@ -7,6 +7,12 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
 
+const getExpiringMonths = (req) => {
+  const raw = req.headers['x-expiring-months'] || req.query.expiring_months || '3';
+  const m = parseInt(raw, 10);
+  return Number.isFinite(m) && m > 0 ? m : 3;
+};
+
 // This helper function generates the HTML table for the email body
 const generateEmailHTML = (contracts) => {
   // These columns match the ones you want in the email
@@ -45,7 +51,7 @@ const generateEmailHTML = (contracts) => {
   return `
     <div style="font-family: sans-serif; font-size: 14px; color: #333;">
       <p>Dear Sales,</p>
-      <p>Here is a list of maintenance contracts which will expire in the coming 3 months. Thank you!</p>
+      <p>Here is a list of maintenance contracts which will expire in the coming ${months} month(s). Thank you!</p>
       <table style="border-collapse: collapse; width: 100%; border: 1px solid #ddd;">
         <thead style="background-color: #f2f2f2;">
           <tr>
@@ -91,7 +97,8 @@ router.post('/send-renewal-email', async (req, res) => {
     // 2. Generate the dynamic email subject
     const currentDate = new Date();
     const monthYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-    const subjectLine = `TESTING Maintenance contract reminder (${monthYear})`;
+    const months = getExpiringMonths(req);
+    const subjectLine = `Maintenance contract reminder (${months} months window)`;
 
     // 3. Send the email using the configured transporter
     await transporter.sendMail({

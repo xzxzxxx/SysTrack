@@ -1,6 +1,15 @@
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 
+// --- session-only "Expiring Soon months" helper ---
+const readSessionExpiringMonths = () => {
+  // Read an integer string from sessionStorage; return null if not set
+  const raw = sessionStorage.getItem('expiringMonthsOverride');
+  if (!raw) return null;
+  const m = parseInt(raw, 10);
+  return Number.isFinite(m) && m > 0 ? String(m) : null;
+};
+
 // Create a new Axios instance with a base URL
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3000/api',
@@ -20,11 +29,25 @@ function onRefreshed(newToken) {
 // This runs BEFORE each request is sent.
 api.interceptors.request.use(
   (config) => {
+    // Keep existing token header
     const token = localStorage.getItem('token');
     if (token) {
       // Add the Authorization header to every authenticated request
       config.headers['Authorization'] = `Bearer ${token}`;
     }
+
+    // Add session-only expiring months header
+    const m = readSessionExpiringMonths();
+    if (m) {
+      // Backend should read this to override "Expiring Soon" window
+      config.headers['X-Expiring-Months'] = m;
+    } else {
+      // Ensure no stale header leaks when override is cleared
+      if (config.headers && 'X-Expiring-Months' in config.headers) {
+        delete config.headers['X-Expiring-Months'];
+      }
+    }
+
     return config;
   },
   (error) => {
@@ -89,5 +112,8 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Optional: listen to live updates (no-op; next request will read storage)
+window.addEventListener('expiring-months-updated', () => { /* no-op */ });
 
 export default api;

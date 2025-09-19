@@ -15,6 +15,13 @@ const categoryMap = {
   EMB: 'ME'
 };
 
+// Helper to read expiring months from header or query (default 3)
+const getExpiringMonths = (req) => {
+  const raw = req.headers['x-expiring-months'] || req.query.expiring_months || '3';
+  const m = parseInt(raw, 10);
+  return Number.isFinite(m) && m > 0 ? m : 3;
+};
+
 // Generate contract code (e.g., MS25A0103)
 // Format: mapped_category(2letter)YYdedicated_numberno_of_orders
 const generateContractCode = async (category, client_id) => {
@@ -115,6 +122,9 @@ const allowedSortColumns = {
 // GET all contracts with enhanced search, filtering, and pagination
 router.get('/', async (req, res) => {
   try{
+    // session-based override or default
+    const expMonths = getExpiringMonths(req);
+
     // Destructure all possible query parameters
     const { page = 1, limit = 50, project_id, statuses, jobnote, contract_name, client_name, location, categories } = req.query;
     const offset = (page - 1) * limit;
@@ -126,7 +136,7 @@ router.get('/', async (req, res) => {
       LEFT JOIN clients cl ON c.client_id = cl.client_id
       LEFT JOIN Users u ON c.user_id = u.user_id
     `;
-
+    
     // Use parameterized queries to prevent SQL injection
     const values = [];
     const conditions = [];
@@ -162,16 +172,20 @@ router.get('/', async (req, res) => {
     if (statuses) {
       // Frontend sends statuses as a comma-separated string, e.g., "Active,Expired"
       const statusArray = statuses.split(',');
+      values.push(expMonths);
+      const monthsIdx = values.length;
       values.push(statusArray);
+      const statusesIdx = values.length;
+
 
       // This CASE statement replicates the logic of `calculateContractStatus` directly in SQL
       conditions.push(`
         (CASE
           WHEN NOW() < c.start_date THEN 'Pending'
           WHEN NOW() > c.end_date THEN 'Expired'
-          WHEN c.end_date <= (NOW() + INTERVAL '3 months') THEN 'Expiring Soon'
+          WHEN c.end_date <= (NOW() + make_interval(months => $${monthsIdx})) THEN 'Expiring Soon'
           ELSE 'Active'
-        END) = ANY($${values.length})
+        END) = ANY($${statusesIdx})
       `);
     }
 
@@ -216,21 +230,23 @@ router.get('/', async (req, res) => {
     const limitPlaceholder = `$${dataValues.length}`;
     dataValues.push(offset);
     const offsetPlaceholder = `$${dataValues.length}`;
+    dataValues.push(getExpiringMonths(req));
+    const monthsPlaceholder = `$${dataValues.length}`;
 
-    const dataQuery = `
-        SELECT c.*, p.project_name, cl.client_name, u.username, cl.dedicated_number,
-          (CASE
-            WHEN NOW() < c.start_date THEN 'Pending'
-            WHEN NOW() > c.end_date THEN 'Expired'
-            WHEN c.end_date <= (NOW() + INTERVAL '3 months') THEN 'Expiring Soon'
-            ELSE 'Active'
-          END) as contract_status
-        ${baseQuery}
-        ${whereClause}
-        ${orderByClause}
-        LIMIT ${limitPlaceholder}
-        OFFSET ${offsetPlaceholder}
-      `;
+      const dataQuery = `
+      SELECT c.*, p.project_name, cl.client_name, u.username, cl.dedicated_number,
+        (CASE
+          WHEN NOW() < c.start_date THEN 'Pending'
+          WHEN NOW() > c.end_date THEN 'Expired'
+          WHEN c.end_date <= (NOW() + make_interval(months => ${monthsPlaceholder})) THEN 'Expiring Soon'
+          ELSE 'Active'
+        END) as contract_status
+      ${baseQuery}
+      ${whereClause}
+      ${orderByClause}
+      LIMIT ${limitPlaceholder}
+      OFFSET ${offsetPlaceholder}
+    `;
 
       // --- Execute queries ---
     const [dataResult, countResult] = await Promise.all([
@@ -252,24 +268,24 @@ router.get('/', async (req, res) => {
 // GET all contracts that are expiring soon for the notification review page
 router.get('/expiring-for-notice', async (req, res) => {
   try {
-    const query = `
-      SELECT
-        c.*, -- Select all columns from the contracts table
-        cl.client_name,
-        p.project_name
+    const months = getExpiringMonths(req);
+    const result = await pool.query(
+      `
+      SELECT c.*, cl.client_name, p.project_name
       FROM contracts c
       LEFT JOIN clients cl ON c.client_id = cl.client_id
       LEFT JOIN projects p ON c.project_id = p.project_id
-      WHERE c.end_date BETWEEN NOW() AND NOW() + INTERVAL '3 months'
+      WHERE c.end_date BETWEEN NOW() AND NOW() + make_interval(months => $1)
       ORDER BY c.end_date ASC
-    `;
-    const result = await pool.query(query);
+      `,
+      [months]
+    );
 
     // Calculate status for each contract before sending
     // in the future we will add a status call renewed
-    const contractsWithStatus = result.rows.map(contract => ({
-      ...contract,
-      contract_status: 'Expiring Soon' // We know this from the WHERE clause
+    const contractsWithStatus = result.rows.map(c => ({
+      ...c,
+      contract_status: 'Expiring Soon'
     }));
 
     res.json(contractsWithStatus);
