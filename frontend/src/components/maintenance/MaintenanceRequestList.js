@@ -168,6 +168,56 @@ function MaintenanceRequestList({ token }) {
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);
   };
+
+  // -- CSV Export Functionality --
+
+  const exportVisibleRecordsToCSV = () => {
+    // Use current visible columns and their order
+    const headers = order
+      .filter(key => visibleColumns[key])            // only visible columns
+      .map(key => columns.find(c => c.key === key)?.label || key);
+
+    const keys = order.filter(key => visibleColumns[key]);
+
+    // CSV escape helper
+    const esc = (val) => {
+      if (val === null || val === undefined) return '';
+      const s = String(val);
+      // Escape quotes by doubling them, wrap in quotes if contains comma/quote/newline
+      const needsQuote = /[",\n]/.test(s);
+      const out = s.replace(/"/g, '""');
+      return needsQuote ? `"${out}"` : out;
+    };
+
+    // Row formatter according to column key
+    const formatCell = (record, key) => {
+      if (key === 'pics') {
+        return record.pics?.map(pic => pic.username).join(', ') || '-';
+      }
+      if (key === 'is_warranty') {
+        return record.is_warranty ? 'Yes' : 'No';
+      }
+      if (['service_date', 'created_at', 'updated_at', 'completion_date', 'arrive_time', 'depart_time'].includes(key)) {
+        return record[key] ? new Date(record[key]).toLocaleString() : '-';
+      }
+      return record[key] ?? '-';
+    };
+
+    // Build CSV string
+    const headerLine = headers.map(esc).join(',');
+    const dataLines = records.map(r => keys.map(k => esc(formatCell(r, k))).join(','));
+    const csv = [headerLine, ...dataLines].join('\n');
+
+    // Trigger download
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+    a.download = `maintenance_requests_${ts}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   
   // Placeholder for the table rendering (we will build this out next)
   return (
@@ -181,6 +231,14 @@ function MaintenanceRequestList({ token }) {
             onClick={() => history.push('/maintenance/new')}
           >
             Add New Request
+          </button>
+          <button
+            type="button"
+            className="btn btn-outline-secondary ml-2"
+            onClick={exportVisibleRecordsToCSV}
+            disabled={loading || records.length === 0}
+          >
+            Export
           </button>
           <hr />
           <h5>Search Filters</h5>
