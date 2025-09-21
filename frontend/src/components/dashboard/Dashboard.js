@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
 import { Link } from 'react-router-dom';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 // helper to read session override (default 3)
 const readSessionExpiringMonths = () => {
@@ -16,6 +17,9 @@ function Dashboard({ token }) {
 
   // expiring months for title
   const [expMonths, setExpMonths] = useState(readSessionExpiringMonths());
+
+  // [{ ym, active_count, pending_count, total_count }]
+  const [apTrend, setApTrend] = useState([]);
 
   useEffect(() => {
     // listen for session override updates from Settings
@@ -48,13 +52,17 @@ function Dashboard({ token }) {
           closedTotal = closedMaintRes.data?.total || 0;
         } catch {}
         const openMaintenance = Math.max(0, allTotal - closedTotal);
-        
+
         setStats({
           clients:        clientsRes.data?.total || 0,
           activePending:  activePendingRes.data?.total || 0,
           expiring:       expiringRes.data?.total || 0,
           openMaintenance
         });
+
+        const trendRes = await api.get('/contracts/stats/active-pending-by-month', { params: { months: 12 } });
+        setApTrend(trendRes.data || []);
+
       } catch (err) {
         setError(err.response?.data?.error || 'Failed to fetch stats');
       } finally {
@@ -65,6 +73,7 @@ function Dashboard({ token }) {
   }, [token]);
 
   const monthsLabel = `${expMonths} month${expMonths === 1 ? '' : 's'}`;
+  const latest = apTrend.length ? apTrend[apTrend.length - 1].total_count : 0;
 
   if (!token) {
     return (
@@ -95,6 +104,28 @@ function Dashboard({ token }) {
   return (
     <div className="container-fluid">
       <h2 className="my-4">Dashboard</h2>
+      <div className="card mb-4">
+        <div className="card-header d-flex align-items-center justify-content-between">
+          <span>Active + Pending (Last 12 months)</span>
+          <small className="text-muted">Latest total: {latest}</small>
+        </div>
+        <div className="card-body" style={{ height: 220 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={apTrend}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="ym" tick={{ fontSize: 10 }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+              <Tooltip />
+              {/* Total-only mini bar */}
+              <Bar dataKey="total_count" name="Active+Pending" fill="#0d6efd" />
+              {/* If you prefer stacked composition, uncomment below:
+              <Bar dataKey="active_count" stackId="a" name="Active" fill="#198754" />
+              <Bar dataKey="pending_count" stackId="a" name="Pending" fill="#fd7e14" />
+              */}
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
       <div className="row">
         <div className="col-md-4 col-12 mb-3">
           <div className="card shadow-sm">

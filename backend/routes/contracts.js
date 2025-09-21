@@ -326,6 +326,41 @@ router.get('/:contract_id', async (req, res) => {
   }
 });
 
+router.get('/stats/active-pending-by-month', async (req, res) => {
+  try {
+    const months = Math.max(1, Math.min(parseInt(req.query.months || '12', 10), 60)); // 1..60
+
+    const sql = `
+      WITH ms AS (
+        SELECT
+          (date_trunc('month', NOW()) - (INTERVAL '1 month' * gs.i))::date AS month_start,
+          (date_trunc('month', NOW()) - (INTERVAL '1 month' * gs.i) + INTERVAL '1 month' - INTERVAL '1 day')::date AS month_end
+        FROM generate_series(0, $1 - 1) AS gs(i)
+      )
+      SELECT
+        to_char(ms.month_start, 'YYYY-MM') AS ym,
+        SUM(CASE WHEN c.start_date <= ms.month_end AND c.end_date >= ms.month_end THEN 1 ELSE 0 END)::int AS active_count,
+        SUM(CASE WHEN ms.month_end < c.start_date THEN 1 ELSE 0 END)::int AS pending_count,
+        SUM(CASE
+              WHEN c.start_date <= ms.month_end AND c.end_date >= ms.month_end THEN 1
+              WHEN ms.month_end < c.start_date THEN 1
+              ELSE 0
+            END)::int AS total_count
+      FROM ms
+      JOIN contracts c
+        ON c.end_date >= ms.month_end  -- exclude expired as of month_end
+      GROUP BY ms.month_start
+      ORDER BY ms.month_start;
+    `;
+
+    const { rows } = await pool.query(sql, [months]);
+    res.json(rows); // [{ ym:'2025-01', active_count:xx, pending_count:yy, total_count:zz }, ...]
+  } catch (err) {
+    console.error('Error building monthly stats:', err.stack);
+    res.status(500).json({ error: 'Server error while building stats' });
+  }
+});
+
 // Create a contract
 router.post('/', async (req, res) => {
   const {
