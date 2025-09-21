@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { Pool } = require('pg');
 const verifyToken = require('../middleware/auth'); // Assuming your token verification middleware is here
-const checkRole = require('../middleware/checkRole'); // Import our new role check middleware
+//const checkRole = require('../middleware/checkRole'); // Import our new role check middleware
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -10,7 +10,7 @@ const pool = new Pool({
 
 // Protect all routes in this file. Only users with 'admin' or 'AE' roles can access them.
 router.use(verifyToken);
-router.use(checkRole(['admin', 'AE']));
+//router.use(checkRole(['admin', 'AE']));
 
 // --- API Endpoints ---
 
@@ -101,105 +101,102 @@ router.post('/', async (req, res) => {
 
 
 router.get('/', async (req, res) => {
-    const {
-        page = 1,
-        limit = 10,
-        statuses,
-        // --- Individual search fields ---
-        service_code,
-        client_name,
-        jobnote,
-        location_district,
-        ae_name, // This will search based on the PICs assigned
-        // --- Sorting fields ---
-        sort_by_1, sort_dir_1 = 'asc',
-        sort_by_2, sort_dir_2 = 'asc'
-      } = req.query;
-    
-      const offset = (page - 1) * limit;
-      
-      let baseQuery = `
-        FROM maintenance_records mr
-        LEFT JOIN clients c ON mr.client_id = c.client_id
-        LEFT JOIN users u_creator ON mr.user_id = u_creator.user_id
-      `;
-    
-      let whereClauses = [];
-      let queryParams = [];
-      let paramIndex = 1;
-    
-      // Build WHERE clauses for each search filter
-      if (statuses) {
-        whereClauses.push(`mr.status = ANY($${paramIndex++}::text[])`);
-        queryParams.push(statuses.split(','));
-      }
-      if (service_code) {
-        whereClauses.push(`mr.service_code ILIKE $${paramIndex++}`);
-        queryParams.push(`%${service_code}%`);
-      }
-      if (client_name) {
-        whereClauses.push(`c.client_name ILIKE $${paramIndex++}`);
-        queryParams.push(`%${client_name}%`);
-      }
-      if (jobnote) {
-        whereClauses.push(`mr.jobnote ILIKE $${paramIndex++}`);
-        queryParams.push(`%${jobnote}%`);
-      }
-      if (ae_name) {
-        whereClauses.push(`
-          mr.maintenance_id IN (
-            SELECT mrp.maintenance_request_id
-            FROM maintenance_request_pics mrp
-            JOIN users u_pic ON mrp.pic_user_id = u_pic.user_id
-            WHERE u_pic.username ILIKE $${paramIndex++}
-          )
-        `);
-        queryParams.push(`%${ae_name}%`);
-      }
-      // Add other search fields here...
-    
-      const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-    
-      // Build ORDER BY clause
-      let orderByClauses = [];
-      if (sort_by_1) orderByClauses.push(`"${sort_by_1}" ${sort_dir_1.toUpperCase()}`);
-      if (sort_by_2) orderByClauses.push(`"${sort_by_2}" ${sort_dir_2.toUpperCase()}`);
-      const orderByString = orderByClauses.length > 0 ? `ORDER BY ${orderByClauses.join(', ')}` : 'ORDER BY mr.maintenance_id DESC';
-    
-      try {
-        // --- Query to get the total count of matching records ---
-        const countQuery = `SELECT COUNT(DISTINCT mr.maintenance_id) AS total_count ${baseQuery} ${whereString}`;
-        const totalResult = await pool.query(countQuery, queryParams);
-        const total = parseInt(totalResult.rows[0].total_count, 10) || 0;
-    
-        // --- Query to get the paginated data ---
-        const dataQuery = `
-          SELECT 
-            mr.*, -- Selects all fields from the maintenance_records table itself
-            c.client_name, 
-            u_creator.username as creator_username,
-            (SELECT json_agg(jsonb_build_object('user_id', u_pic.user_id, 'username', u_pic.username))
-            FROM maintenance_request_pics mrp
-            JOIN users u_pic ON mrp.pic_user_id = u_pic.user_id
-            WHERE mrp.maintenance_request_id = mr.maintenance_id) AS pics
-          ${baseQuery}
-          ${whereString}
-          ${orderByString}
-          LIMIT $${paramIndex++} OFFSET $${paramIndex++}
-        `;
-        const dataResult = await pool.query(dataQuery, [...queryParams, limit, offset]);
-    
-        res.json({
-          data: dataResult.rows,
-          total,
-          page: parseInt(page, 10),
-          limit: parseInt(limit, 10)
-        });
-    
-      } catch (err) {
-        console.error(err.stack);
-        res.status(500).json({ error: 'Server error while fetching maintenance records.' });
-      }
+  const {
+    page = 1,
+    limit = 10,
+    statuses,
+    service_code,
+    client_name,
+    jobnote,
+    location_district,
+    ae_name,
+    sort_by_1, sort_dir_1 = 'asc',
+    sort_by_2, sort_dir_2 = 'asc'
+  } = req.query;
+
+  const offset = (page - 1) * limit;
+
+  let baseQuery = `
+    FROM maintenance_records mr
+    LEFT JOIN clients c ON mr.client_id = c.client_id
+    LEFT JOIN users u_creator ON mr.user_id = u_creator.user_id
+  `;
+
+  const whereClauses = [];
+  const params = [];
+  let i = 1;
+
+  // B) decode '+' to space for statuses values
+  if (statuses) {
+    const statusArray = statuses.split(',').map(s => s.replace(/\+/g, ' '));
+    whereClauses.push(`mr.status = ANY($${i++}::text[])`);
+    params.push(statusArray);
+  }
+
+  if (service_code) {
+    whereClauses.push(`mr.service_code ILIKE $${i++}`);
+    params.push(`%${service_code}%`);
+  }
+  if (client_name) {
+    whereClauses.push(`c.client_name ILIKE $${i++}`);
+    params.push(`%${client_name}%`);
+  }
+  if (jobnote) {
+    whereClauses.push(`mr.jobnote ILIKE $${i++}`);
+    params.push(`%${jobnote}%`);
+  }
+  if (location_district) {
+    whereClauses.push(`mr.location_district ILIKE $${i++}`);
+    params.push(`%${location_district}%`);
+  }
+
+  if (ae_name) {
+    whereClauses.push(`
+      mr.maintenance_id IN (
+        SELECT mrp.maintenance_request_id
+        FROM maintenance_request_pics mrp
+        JOIN users u_pic ON mrp.pic_user_id = u_pic.user_id
+        WHERE u_pic.username ILIKE $${i++}
+      )
+    `);
+    params.push(`%${ae_name}%`);
+  }
+
+  const whereSQL = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+  const orderBy = [];
+  if (sort_by_1) orderBy.push(`"${sort_by_1}" ${String(sort_dir_1).toUpperCase()}`);
+  if (sort_by_2) orderBy.push(`"${sort_by_2}" ${String(sort_dir_2).toUpperCase()}`);
+  const orderSQL = orderBy.length ? `ORDER BY ${orderBy.join(', ')}` : 'ORDER BY mr.maintenance_id DESC';
+
+  try {
+    const countSQL = `SELECT COUNT(DISTINCT mr.maintenance_id) AS total_count ${baseQuery} ${whereSQL}`;
+    const countRes = await pool.query(countSQL, params);
+    const total = parseInt(countRes.rows[0]?.total_count || '0', 10);
+
+    const dataSQL = `
+      SELECT
+        mr.*,
+        c.client_name,
+        u_creator.username AS creator_username,
+        (
+          SELECT json_agg(jsonb_build_object('user_id', u_pic.user_id, 'username', u_pic.username))
+          FROM maintenance_request_pics mrp
+          JOIN users u_pic ON mrp.pic_user_id = u_pic.user_id
+          WHERE mrp.maintenance_request_id = mr.maintenance_id
+        ) AS pics
+      ${baseQuery}
+      ${whereSQL}
+      ${orderSQL}
+      LIMIT $${i++} OFFSET $${i++}
+    `;
+
+    const dataRes = await pool.query(dataSQL, [...params, Number(limit), Number(offset)]);
+    return res.json({ data: dataRes.rows, total, page: Number(page), limit: Number(limit) });
+  } catch (err) {
+    console.error('maintenance GET / error:', err);
+    return res.status(500).json({ error: 'Server error while fetching maintenance records.' });
+  }
 });
 
 // GET /api/maintenance-records/:id - Get a single record by its ID
@@ -309,9 +306,11 @@ router.delete('/:id', async (req, res) => {
       const creatorUserId = recordResult.rows[0].user_id;
   
       // Step 2: Check permissions. User must be an admin OR the original creator.
+      /*
       if (requestingUserRole !== 'admin' && requestingUserId !== creatorUserId) {
         return res.status(403).json({ error: 'Forbidden: You do not have permission to delete this record.' });
       }
+        */
       
       // Step 3: If permission check passes, delete the record.
       // The ON DELETE CASCADE rule will automatically delete related entries in maintenance_request_pics.

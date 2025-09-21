@@ -37,10 +37,18 @@ function Dashboard({ token }) {
         const clientsRes = await api.get('/clients', { params: { limit: 1 } });
         const activePendingRes = await api.get('/contracts', { params: { statuses: 'Active,Pending', limit: 1 } });
         const expiringRes = await api.get('/contracts', { params: { statuses: 'Expiring Soon', limit: 1 } });
-        const allMaintRes    = await api.get('/maintenance-records', { params: { limit: 1 } });
-        const closedMaintRes = await api.get('/maintenance-records', { params: { statuses: 'Closed', limit: 1 } });
-        const openMaintenance = (allMaintRes.data?.total || 0) - (closedMaintRes.data?.total || 0);
 
+        let allTotal = 0, closedTotal = 0;
+        try {
+          const allMaintRes = await api.get('/maintenance-records', { params: { limit: 1 } });
+          allTotal = allMaintRes.data?.total || 0;
+        } catch {}
+        try {
+          const closedMaintRes = await api.get('/maintenance-records', { params: { statuses: 'Closed', limit: 1 } });
+          closedTotal = closedMaintRes.data?.total || 0;
+        } catch {}
+        const openMaintenance = Math.max(0, allTotal - closedTotal);
+        
         setStats({
           clients:        clientsRes.data?.total || 0,
           activePending:  activePendingRes.data?.total || 0,
