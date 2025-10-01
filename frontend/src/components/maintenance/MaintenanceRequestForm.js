@@ -125,9 +125,13 @@ function MaintenanceRequestForm({ token }) {
   // Common change
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    let newValue = value;
+    if (type === 'radio' && value === '') {
+      newValue = null; // Set to null for "Not Set"
+    }
     setForm((f) => ({
       ...f,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: type === 'checkbox' ? checked : newValue,
     }));
   };
 
@@ -177,64 +181,31 @@ function MaintenanceRequestForm({ token }) {
     return [...errs, ...dateErrs];
   };
 
-  // Submit
+  // Submit handler with null conversion for radio fields
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const errors = validateForStatus(form.status);
-    if (errors.length) {
-      setToast({ show: true, type: 'danger', message: errors.join('; ') });
-      setTimeout(() => setToast({ show: false, type: '', message: '' }), 2500);
-      return;
-    }
-
-    const payload = {
-      service_date: form.service_date || null,
-      service_code: form.service_code,
-      client_id: form.client_id,
-      jobnote: form.jobnote,
-      location_district: form.location_district || null,
-      is_warranty: !!form.is_warranty,
-      sales: form.sales || null,
-      product_model: form.product_model || null,
-      serial_no: form.serial_no || null,
-      problem_description: form.problem_description || null,
-      solution_details: form.solution_details || null,
-      labor_details: form.labor_details || null,
-      parts_details: form.parts_details || null,
-      arrive_time: form.arrive_time || null,
-      depart_time: form.depart_time || null,
-      completion_date: form.completion_date || null,
-      remark: form.remark || null,
-      service_type: form.service_type || null,
-      product_type: form.product_type || null,
-      support_method: form.support_method || null,
-      symptom_classification: form.symptom_classification || null,
-      alias: form.alias || null,
-      status: form.status, // target status
-      pic_ids: form.pic_ids_input
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .map((s) => Number(s))
-        .filter((n) => Number.isFinite(n)),
-    };
-
     setLoading(true);
+
+    // Convert empty radio fields to null
+    const payload = { ...form };
+    ['service_type', 'product_type', 'symptom_classification', 'support_method'].forEach((field) => {
+      if (payload[field] === '' || payload[field] === undefined) {
+        payload[field] = null;
+      }
+    });
+
     try {
       if (isEdit) {
         await api.put(`/maintenance-records/${id}`, payload);
-        setToast({ show: true, type: 'success', message: 'Record updated' });
       } else {
-        const res = await api.post('/maintenance-records', payload);
-        setToast({ show: true, type: 'success', message: 'Record created' });
-        // Navigate to edit page after creation
-        history.push(`/maintenance/${res.data.maintenance_id}`);
+        await api.post('/maintenance-records', payload);
       }
+      history.push('/maintenance-records');
     } catch (err) {
-      setToast({ show: true, type: 'danger', message: err.response?.data?.error || 'Save failed' });
+      console.error(err);
+      alert('Error saving maintenance record.');
     } finally {
       setLoading(false);
-      setTimeout(() => setToast({ show: false, type: '', message: '' }), 2000);
     }
   };
 
@@ -384,47 +355,208 @@ function MaintenanceRequestForm({ token }) {
 
               <div className="col-md-6 mb-3">
                 <label className="form-label">Support Method</label>
-                <input
-                  type="text"
-                  name="support_method"
-                  className="form-control"
-                  value={form.support_method}
-                  onChange={handleChange}
-                  placeholder="e.g. On-site / Remote"
-                />
+                <div className="form-check">
+                  <input
+                    type="radio"
+                    id="support_method-Onsite"
+                    name="support_method"
+                    value="Onsite"
+                    checked={form.support_method === "Onsite"}
+                    onChange={handleChange}
+                    className="form-check-input"
+                  />
+                  <label htmlFor="support_method-Onsite" className="form-check-label">Onsite</label>
+                </div>
+                <div className="form-check">
+                  <input
+                    type="radio"
+                    id="support_method-Remote"
+                    name="support_method"
+                    value="Remote"
+                    checked={form.support_method === "Remote"}
+                    onChange={handleChange}
+                    className="form-check-input"
+                  />
+                  <label htmlFor="support_method-Remote" className="form-check-label">Remote</label>
+                </div>
+                <div className="form-check">
+                  <input
+                    type="radio"
+                    id="support_method-none"
+                    name="support_method"
+                    value=""
+                    checked={form.support_method === "" || form.support_method === null || form.support_method === undefined}
+                    onChange={handleChange}
+                    className="form-check-input"
+                  />
+                  <label htmlFor="support_method-none" className="form-check-label">Not Set</label>
+                </div>
               </div>
               <div className="col-md-6 mb-3">
                 <label className="form-label">Symptom Classification</label>
-                <input
-                  type="text"
-                  name="symptom_classification"
-                  className="form-control"
-                  value={form.symptom_classification}
-                  onChange={handleChange}
-                  placeholder="e.g. Hardware / Software"
-                />
+                <div className="form-check">
+                  <input
+                    type="radio"
+                    id="symptom_classification-Software"
+                    name="symptom_classification"
+                    value="Software"
+                    checked={form.symptom_classification === "Software"}
+                    onChange={handleChange}
+                    className="form-check-input"
+                  />
+                  <label htmlFor="symptom_classification-Software" className="form-check-label">Software</label>
+                </div>
+                <div className="form-check">
+                  <input
+                    type="radio"
+                    id="symptom_classification-Hardware"
+                    name="symptom_classification"
+                    value="Hardware"
+                    checked={form.symptom_classification === "Hardware"}
+                    onChange={handleChange}
+                    className="form-check-input"
+                  />
+                  <label htmlFor="symptom_classification-Hardware" className="form-check-label">Hardware</label>
+                </div>
+                <div className="form-check">
+                  <input
+                    type="radio"
+                    id="symptom_classification-none"
+                    name="symptom_classification"
+                    value=""
+                    checked={form.symptom_classification === "" || form.symptom_classification === null || form.symptom_classification === undefined}
+                    onChange={handleChange}
+                    className="form-check-input"
+                  />
+                  <label htmlFor="symptom_classification-none" className="form-check-label">Not Set</label>
+                </div>
               </div>
 
               <div className="col-md-6 mb-3">
                 <label className="form-label">Service Type</label>
-                <input
-                  type="text"
-                  name="service_type"
-                  className="form-control"
-                  value={form.service_type}
-                  onChange={handleChange}
-                  placeholder="e.g. Preventive / Corrective"
-                />
+                <div className="form-check">
+                  <input
+                    type="radio"
+                    id="service_type-Preventive"
+                    name="service_type"
+                    value="Preventive"
+                    checked={form.service_type === "Preventive"}
+                    onChange={handleChange}
+                    className="form-check-input"
+                  />
+                  <label htmlFor="service_type-Preventive" className="form-check-label">Preventive</label>
+                </div>
+                <div className="form-check">
+                  <input
+                    type="radio"
+                    id="service_type-Maintenance"
+                    name="service_type"
+                    value="Maintenance"
+                    checked={form.service_type === "Maintenance"}
+                    onChange={handleChange}
+                    className="form-check-input"
+                  />
+                  <label htmlFor="service_type-Maintenance" className="form-check-label">Maintenance</label>
+                </div>
+                <div className="form-check">
+                  <input
+                    type="radio"
+                    id="service_type-Installation/ Training"
+                    name="service_type"
+                    value="Installation/ Training"
+                    checked={form.service_type === "Installation/ Training"}
+                    onChange={handleChange}
+                    className="form-check-input"
+                  />
+                  <label htmlFor="service_type-Installation/ Training" className="form-check-label">Installation/ Training</label>
+                </div>
+                <div className="form-check">
+                  <input
+                    type="radio"
+                    id="service_type-Technical Support"
+                    name="service_type"
+                    value="Technical Support"
+                    checked={form.service_type === "Technical Support"}
+                    onChange={handleChange}
+                    className="form-check-input"
+                  />
+                  <label htmlFor="service_type-Technical Support" className="form-check-label">Technical Support</label>
+                </div>
+                <div className="form-check">
+                  <input
+                    type="radio"
+                    id="service_type-none"
+                    name="service_type"
+                    value=""
+                    checked={form.service_type === "" || form.service_type === null || form.service_type === undefined}
+                    onChange={handleChange}
+                    className="form-check-input"
+                  />
+                  <label htmlFor="service_type-none" className="form-check-label">Not Set</label>
+                </div>
               </div>
               <div className="col-md-6 mb-3">
                 <label className="form-label">Product Type</label>
-                <input
-                  type="text"
-                  name="product_type"
-                  className="form-control"
-                  value={form.product_type}
-                  onChange={handleChange}
-                />
+                <div className="form-check">
+                  <input
+                    type="radio"
+                    id="product_type-Emb"
+                    name="product_type"
+                    value="Emb"
+                    checked={form.product_type === "Emb"}
+                    onChange={handleChange}
+                    className="form-check-input"
+                  />
+                  <label htmlFor="product_type-Emb" className="form-check-label">Emb</label>
+                </div>
+                <div className="form-check">
+                  <input
+                    type="radio"
+                    id="product_type-Ser"
+                    name="product_type"
+                    value="Ser"
+                    checked={form.product_type === "Ser"}
+                    onChange={handleChange}
+                    className="form-check-input"
+                  />
+                  <label htmlFor="product_type-Ser" className="form-check-label">Ser</label>
+                </div>
+                <div className="form-check">
+                  <input
+                    type="radio"
+                    id="product_type-DS"
+                    name="product_type"
+                    value="DS"
+                    checked={form.product_type === "DS"}
+                    onChange={handleChange}
+                    className="form-check-input"
+                  />
+                  <label htmlFor="product_type-DS" className="form-check-label">DS</label>
+                </div>
+                <div className="form-check">
+                  <input
+                    type="radio"
+                    id="product_type-Other"
+                    name="product_type"
+                    value="Other"
+                    checked={form.product_type === "Other"}
+                    onChange={handleChange}
+                    className="form-check-input"
+                  />
+                  <label htmlFor="product_type-Other" className="form-check-label">Other</label>
+                </div>
+                <div className="form-check">
+                  <input
+                    type="radio"
+                    id="product_type-none"
+                    name="product_type"
+                    value=""
+                    checked={form.product_type === "" || form.product_type === null || form.product_type === undefined}
+                    onChange={handleChange}
+                    className="form-check-input"
+                  />
+                  <label htmlFor="product_type-none" className="form-check-label">Not Set</label>
+                </div>
               </div>
             </div>
 
