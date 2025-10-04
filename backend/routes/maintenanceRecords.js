@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { Pool } = require('pg');
-const verifyToken = require('../middleware/auth'); // Assuming your token verification middleware is here
-//const checkRole = require('../middleware/checkRole'); // Import our new role check middleware
+const verifyToken = require('../middleware/auth');
+//const checkRole = require('../middleware/checkRole');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -336,52 +336,85 @@ router.get('/:id', async (req, res) => {
   }
 });
   
-// PUT /api/maintenance-records/:id - Update + optional status transition + PICs reset
+// PUT /api/maintenance-records/:id - Update record with status transition and PICs management
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
-  const { pic_ids, jobnote, status, ...fieldsToUpdate } = req.body;
+  const { pic_ids, status, jobnote, ...rawFields } = req.body;
 
-  // Validate jobnote when provided
+  // Define allowed fields in maintenance_records table (exclude computed/JOIN fields like creator_username, client_name)
+  // Based on maintenance_records schema: exclude 'client', 'created_at', 'updated_at' (auto), 'user_id' (immutable)
+  const allowedFields = [
+    'service_date', 'service_code', 'client_id', 'jobnote', 'location_district',
+    'is_warranty', 'sales', 'product_model', 'serial_no', 'problem_description',
+    'solution_details', 'labor_details', 'parts_details', 'arrive_time', 'depart_time',
+    'completion_date', 'remark', 'service_type', 'product_type', 'support_method',
+    'symptom_classification', 'alias', 'status'  // Use 'status' (or 'maintenance_status' if preferred)
+  ];
+
+  const dateTimeFields = ['service_date', 'arrive_time', 'depart_time', 'completion_date'];
+
+  // Filter only allowed fields from raw input (ignores creator_username, client_name, pic_ids_input, pics, client, etc.)
+  // Convert empty strings to null for date/time fields to prevent PostgreSQL invalid input error
+  const fieldsToUpdate = {};
+  Object.entries(rawFields).forEach(([key, value]) => {
+    if (allowedFields.includes(key)) {
+      if (dateTimeFields.includes(key) && value === '') {
+        fieldsToUpdate[key] = null;  // Convert empty string to null for date/time fields
+      } else {
+        fieldsToUpdate[key] = value;
+      }
+    }
+  });
+
+  // Validate jobnote if provided (must exist in contracts table)
+  let validatedJobnote = jobnote;
   if (jobnote) {
     try {
       const contractCheck = await pool.query('SELECT 1 FROM contracts WHERE jobnote = $1', [jobnote]);
       if (contractCheck.rows.length === 0) {
         return res.status(400).json({ error: `Invalid Job Note: No contract found with Job Note "${jobnote}".` });
       }
-      fieldsToUpdate.jobnote = jobnote;
+      validatedJobnote = jobnote;
+      fieldsToUpdate.jobnote = jobnote;  // Add to update if valid
     } catch (err) {
-      console.error(err);
+      console.error('Jobnote validation error:', err);
       return res.status(500).json({ error: 'Error validating Job Note.' });
     }
   }
 
-  // Validate for target status if provided
+  // Validate target status and required fields (same as POST logic)
   if (status) {
-    const errs = validateForStatus(status, { ...fieldsToUpdate, pic_ids });
-    if (errs.length) return res.status(400).json({ error: errs.join('; ') });
-    fieldsToUpdate.status = status;
+    const validationBody = { ...fieldsToUpdate, pic_ids };  // Include pic_ids for Pending check
+    const errs = validateForStatus(status, validationBody);
+    if (errs.length) {
+      return res.status(400).json({ error: errs.join('; ') });
+    }
+    fieldsToUpdate.status = status;  // Safe to update status
   }
 
+  // Start transaction for atomic updates
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    // Dynamic SET clause
-    const entries = Object.entries(fieldsToUpdate);
-    if (entries.length) {
-      const set = entries.map(([k], idx) => `"${k}" = $${idx + 1}`).join(', ');
-      const vals = entries.map(([, v]) => v);
+    // Update main record (only if there are allowed fields to update)
+    if (Object.keys(fieldsToUpdate).length > 0) {
+      const entries = Object.entries(fieldsToUpdate);
+      const setClause = entries.map(([key], idx) => `"${key}" = $${idx + 1}`).join(', ');
+      const values = entries.map(([, value]) => value);
       const updateSQL = `
         UPDATE maintenance_records
-        SET ${set}, updated_at = CURRENT_TIMESTAMP
-        WHERE maintenance_id = $${vals.length + 1}
+        SET ${setClause}, updated_at = CURRENT_TIMESTAMP
+        WHERE maintenance_id = $${values.length + 1}
       `;
-      await client.query(updateSQL, [...vals, id]);
+      await client.query(updateSQL, [...values, id]);
     }
 
-    // Reset PICs if pic_ids provided
+    // Handle PICs separately: delete existing, insert new (if provided)
     if (Array.isArray(pic_ids)) {
+      // Delete old associations
       await client.query('DELETE FROM maintenance_request_pics WHERE maintenance_request_id = $1', [id]);
+      // Insert new ones if array is not empty
       if (pic_ids.length > 0) {
         await client.query(
           'INSERT INTO maintenance_request_pics (maintenance_request_id, pic_user_id) SELECT $1, unnest($2::int[])',
@@ -394,12 +427,13 @@ router.put('/:id', async (req, res) => {
     return res.json({ message: 'Record updated successfully.' });
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error(err.stack);
+    console.error('Update transaction error:', err.stack);
     return res.status(500).json({ error: 'Server error while updating maintenance record.' });
   } finally {
     client.release();
   }
 });
+
   
 // DELETE /api/maintenance-records/:id
 router.delete('/:id', async (req, res) => {

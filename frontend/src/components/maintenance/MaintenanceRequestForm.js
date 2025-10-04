@@ -186,6 +186,13 @@ function MaintenanceRequestForm({ token }) {
     e.preventDefault();
     setLoading(true);
 
+    const errs = validateForStatus(form.status);
+    if (errs.length) {
+      setLoading(false);
+      alert(errs.join('\n'));
+      return;
+    }  
+
     // Convert empty radio fields to null
     const payload = { ...form };
     ['service_type', 'product_type', 'symptom_classification', 'support_method'].forEach((field) => {
@@ -193,6 +200,16 @@ function MaintenanceRequestForm({ token }) {
         payload[field] = null;
       }
     });
+
+    // map pic_ids_input -> pic_ids:int[]
+    const picIds = String(payload.pic_ids_input || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean)
+      .map(n => Number(n))
+      .filter(n => Number.isInteger(n));
+    payload.pic_ids = picIds;
+    delete payload.pic_ids_input;
 
     try {
       if (isEdit) {
@@ -203,7 +220,7 @@ function MaintenanceRequestForm({ token }) {
       history.push('/maintenance-records');
     } catch (err) {
       console.error(err);
-      alert('Error saving maintenance record.');
+      alert(err.response?.data?.error || 'Error saving maintenance record.');
     } finally {
       setLoading(false);
     }
