@@ -217,7 +217,7 @@ function MaintenanceRequestForm({ token }) {
       } else {
         await api.post('/maintenance-records', payload);
       }
-      history.push('/maintenance-records');
+      history.push('/maintenance');
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.error || 'Error saving maintenance record.');
