@@ -52,6 +52,20 @@ const validateForStatus = (targetStatus, body) => {
   }
 };
 
+// Time validation for arrive and depaetrt time (HH:MM or HH:MM:SS)
+const toPgTimeOrNull = (v) => {
+  if (v === undefined || v === null) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  if (!/^\d{2}:\d{2}(:\d{2})?$/.test(s)) return null; // HH:MM or HH:MM:SS
+  return s;
+};
+const toMin = (s) => {
+  if (!s || !/^\d{2}:\d{2}/.test(s)) return null;
+  const [h, m] = s.split(':').slice(0, 2).map(Number);
+  return h * 60 + m;
+};
+
 /**
  * POST /api/maintenance-records
  * Create a new maintenance record. This is a transactional operation.
@@ -100,9 +114,15 @@ router.post('/', async (req, res) => {
       return res.status(500).json({ error: 'Error validating Job Note.' });
     }
 
+    // Validate arrive_time <= depart_time if both provided
+    const aMin = toMin(toPgTimeOrNull(arrive_time));
+    const dMin = toMin(toPgTimeOrNull(depart_time));
+    if (aMin != null && dMin != null && aMin > dMin) {
+      return res.status(400).json({ error: 'arrive_time must be <= depart_time' });
+    }
+
     // The user_id of the creator comes from the token, not the request body.
     const creatorUserId = req.user.user_id;
-
     // Start a client connection from the pool to manage the transaction.
     const client = await pool.connect();
 
@@ -141,8 +161,8 @@ router.post('/', async (req, res) => {
       solution_details || null,
       labor_details || null,
       parts_details || null,
-      arrive_time || null,
-      depart_time || null,
+      toPgTimeOrNull(arrive_time),
+      toPgTimeOrNull(depart_time),
       completion_date || null,
       remark || null,
       service_type || null,
@@ -357,14 +377,33 @@ router.put('/:id', async (req, res) => {
   // Convert empty strings to null for date/time fields to prevent PostgreSQL invalid input error
   const fieldsToUpdate = {};
   Object.entries(rawFields).forEach(([key, value]) => {
-    if (allowedFields.includes(key)) {
-      if (dateTimeFields.includes(key) && value === '') {
-        fieldsToUpdate[key] = null;  // Convert empty string to null for date/time fields
-      } else {
-        fieldsToUpdate[key] = value;
-      }
+    if (!allowedFields.includes(key)) return;
+
+    if (key === 'arrive_time' || key === 'depart_time') {
+      fieldsToUpdate[key] = toPgTimeOrNull(value); // HH:MM or null
+      return;
+    }
+
+    if (dateTimeFields.includes(key) && value === '') {
+      fieldsToUpdate[key] = null;  // Convert empty string to null for date/time fields
+    } else {
+      fieldsToUpdate[key] = value;
     }
   });
+
+  // Validate arrive_time <= depart_time if both provided
+  const aVal = (Object.prototype.hasOwnProperty.call(fieldsToUpdate, 'arrive_time')
+    ? fieldsToUpdate.arrive_time
+    : toPgTimeOrNull(req.body.arrive_time));
+  const dVal = (Object.prototype.hasOwnProperty.call(fieldsToUpdate, 'depart_time')
+    ? fieldsToUpdate.depart_time
+    : toPgTimeOrNull(req.body.depart_time));
+
+  const aMin = toMin(aVal);
+  const dMin = toMin(dVal);
+  if (aMin != null && dMin != null && aMin > dMin) {
+    return res.status(400).json({ error: 'arrive_time must be <= depart_time' });
+  }
 
   // Validate jobnote if provided (must exist in contracts table)
   let validatedJobnote = jobnote;

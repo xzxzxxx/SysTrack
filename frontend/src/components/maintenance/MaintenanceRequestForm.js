@@ -57,8 +57,8 @@ function MaintenanceRequestForm({ token }) {
           client_id: r.client_id || null,
           client_name: r.client_name || '',
           service_date: r.service_date ? r.service_date.substring(0, 10) : '',
-          arrive_time: r.arrive_time ? r.arrive_time.substring(0, 16) : '',
-          depart_time: r.depart_time ? r.depart_time.substring(0, 16) : '',
+          arrive_time: r.arrive_time ? r.arrive_time.substring(0, 5) : '',
+          depart_time: r.depart_time ? r.depart_time.substring(0, 5) : '',
           completion_date: r.completion_date ? r.completion_date.substring(0, 10) : '',
           sales: r.sales_text || r.sales || '',
           pic_ids_input: Array.isArray(r.pics) ? r.pics.map((p) => p.user_id).join(',') : '',
@@ -198,6 +198,17 @@ function MaintenanceRequestForm({ token }) {
     ['service_type', 'product_type', 'symptom_classification', 'support_method'].forEach((field) => {
       if (payload[field] === '' || payload[field] === undefined) {
         payload[field] = null;
+      }
+    });
+
+    // ensure time-only values; optional: coerce '' to null
+    ['arrive_time', 'depart_time'].forEach((k) => {
+      if (!payload[k]) {
+        payload[k] = null; // send null when empty
+      } else {
+        // keep 'HH:MM' as-is; PG time without time zone accepts it
+        // If backend requires seconds, uncomment:
+        // if (/^\d{2}:\d{2}$/.test(payload[k])) payload[k] = payload[k] + ':00';
       }
     });
 
@@ -640,20 +651,20 @@ function MaintenanceRequestForm({ token }) {
               <div className="col-md-6 mb-3">
                 <label className="form-label">Arrive Time</label>
                 <input
-                  type="datetime-local"
+                  type="time"
                   name="arrive_time"
-                  className="form-control"
-                  value={form.arrive_time || ''}
+                  step="60" // minutes precision
+                  value={form.arrive_time || ''} // 'HH:MM'
                   onChange={handleChange}
                 />
               </div>
               <div className="col-md-6 mb-3">
                 <label className="form-label">Depart Time (fill to close)</label>
                 <input
-                  type="datetime-local"
-                  name="depart_time"
-                  className="form-control"
-                  value={form.depart_time || ''}
+                  type="time"
+                  name="arrive_time"
+                  step="60" // minutes precision
+                  value={form.arrive_time || ''} // 'HH:MM'
                   onChange={handleChange}
                 />
               </div>
