@@ -122,7 +122,7 @@ router.post('/', async (req, res) => {
     }
 
     // The user_id of the creator comes from the token, not the request body.
-    const creatorUserId = req.user.user_id;
+    const creatorUserId = req.user.user_id || req.user.userId;
     // Start a client connection from the pool to manage the transaction.
     const client = await pool.connect();
 
@@ -390,6 +390,10 @@ router.put('/:id', async (req, res) => {
       fieldsToUpdate[key] = value;
     }
   });
+
+  // Get current user id
+  const modifierUserId = req.user.user_id || req.user.userId;
+  fieldsToUpdate.user_id = modifierUserId;
 
   // Validate arrive_time <= depart_time if both provided
   const aVal = (Object.prototype.hasOwnProperty.call(fieldsToUpdate, 'arrive_time')
