@@ -662,9 +662,9 @@ function MaintenanceRequestForm({ token }) {
                 <label className="form-label">Depart Time (fill to close)</label>
                 <input
                   type="time"
-                  name="arrive_time"
+                  name="depart_time"
                   step="60" // minutes precision
-                  value={form.arrive_time || ''} // 'HH:MM'
+                  value={form.depart_time || ''} // 'HH:MM'
                   onChange={handleChange}
                 />
               </div>
