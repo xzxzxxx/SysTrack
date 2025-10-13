@@ -177,6 +177,9 @@ function MaintenanceRequestForm({ token }) {
       case 'In Progress':
         if (!form.service_date) errs.push('Service Date is required for In Progress');
         break;
+      case 'Follow-up required':
+        // same as 'New' - only core fields
+        break;
       case 'Closed':
         if (!form.completion_date) errs.push('Completion Date is required for Closed');
         if (!form.solution_details) errs.push('Solution Details is required for Closed');

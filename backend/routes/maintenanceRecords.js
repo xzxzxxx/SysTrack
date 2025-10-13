@@ -32,25 +32,30 @@ const validateForStatus = (targetStatus, body) => {
   const errors = [];
   switch (targetStatus) {
     case 'New':
-      // Core info only
-      return validateCoreForNew(body);
-    case 'Pending':
-      if (!Array.isArray(body.pic_ids) || body.pic_ids.length < 1) {
-        errors.push('At least one PIC is required for Pending');
-      }
-      return errors;
+      // only core required
+      break;
+    case 'Pending': {
+      const ids = Array.isArray(body.pic_ids) ? body.pic_ids : [];
+      if (ids.length < 1) errors.push('pic_ids (array) with at least 1 PIC is required for Pending');
+      break;
+    }
     case 'In Progress':
       if (!body.service_date) errors.push('service_date is required for In Progress');
-      return errors;
+      break;
+    case 'Follow-up required':
+      // same as 'New' - only core fields required (client_id, jobnote, service_code)
+      // no need for completion_date or solution_details
+      break;
     case 'Closed':
       if (!body.completion_date) errors.push('completion_date is required for Closed');
       if (!body.solution_details) errors.push('solution_details is required for Closed');
-      return errors;
+      break;
     default:
-      errors.push('Unknown status');
-      return errors;
+      errors.push('Invalid status value');
   }
+  return errors;
 };
+
 
 // Time validation for arrive and depaetrt time (HH:MM or HH:MM:SS)
 const toPgTimeOrNull = (v) => {
