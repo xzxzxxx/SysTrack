@@ -484,14 +484,36 @@ router.put('/:id', async (req, res) => {
 
   
 // DELETE /api/maintenance-records/:id
+// DELETE /maintenance-records/:id
 router.delete('/:id', async (req, res) => {
   const { id } = req.params;
+  const client = await pool.connect();
   try {
-    await pool.query('DELETE FROM maintenance_records WHERE maintenance_id = $1', [id]);
-    return res.status(200).json({ message: 'Record deleted successfully.' });
-  } catch (err) {
-    console.error(err.stack);
-    return res.status(500).json({ error: 'Server error while deleting maintenance record.' });
+    await client.query('BEGIN');
+
+    // delete m2m relations first to avoid FK violation
+    await client.query(
+      'DELETE FROM maintenance_request_pics WHERE maintenance_request_id = $1',
+      [id]
+    );
+
+    const del = await client.query(
+      'DELETE FROM maintenance_records WHERE maintenance_id = $1 RETURNING maintenance_id',
+      [id]
+    );
+
+    await client.query('COMMIT');
+
+    if (del.rowCount === 0) {
+      return res.status(404).json({ error: 'Record not found' });
+    }
+    return res.status(200).json({ success: true, maintenance_id: del.rows[0].maintenance_id });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error(e);
+    return res.status(500).json({ error: 'Failed to delete maintenance record' });
+  } finally {
+    client.release();
   }
 });
 

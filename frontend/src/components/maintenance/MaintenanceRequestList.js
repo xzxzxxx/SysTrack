@@ -118,6 +118,24 @@ function MaintenanceRequestList({ token }) {
     history.push('/maintenance/new', { cloneFromId: recordId });
   };
 
+  // Delete handler
+  const handleDelete = async (maintenanceId) => {
+    try {
+      const res = await api.delete(`/maintenance-records/${maintenanceId}`);
+      // treat 200-204 as success
+      const ok = res && ((res.status >= 200 && res.status < 300) || res.status === 204);
+      if (!ok) {
+        throw new Error(`Unexpected status: ${res?.status}`);
+      }
+  
+      setRecords(prev => prev.filter(r => r.maintenance_id !== maintenanceId));
+      setTotalItems(prev => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error(err);
+      alert(err?.response?.data?.error || 'Failed to delete maintenance record.');
+    }
+  };
+
   // Handler for when any search filter input changes
   const handleFilterChange = (field, value) => {
     setFilters(prevFilters => ({
@@ -388,6 +406,16 @@ function MaintenanceRequestList({ token }) {
                             Follow-Up
                           </button>
                         )}
+                        <button
+                          className="btn btn-sm btn-danger"
+                          onClick={() => {
+                            if (window.confirm('Are you sure you want to delete this record?')) {
+                              handleDelete(record.maintenance_id);
+                            }
+                          }}
+                        >
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   ))}
