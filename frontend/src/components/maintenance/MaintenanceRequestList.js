@@ -23,8 +23,8 @@ function MaintenanceRequestList({ token }) {
   const itemsPerPage = 50;
 
   // State for filtering
-  const [selectedStatuses, setSelectedStatuses] = useState(['New', 'Pending', 'In Progress']);
-  const statusOptions = ['New', 'Pending', 'In Progress', 'Closed'];
+  const [selectedStatuses, setSelectedStatuses] = useState(['New', 'Pending', 'In Progress', 'Follow-up required']);
+  const statusOptions = ['New', 'Pending', 'In Progress', 'Follow-up required', 'Closed'];
 
   // This object will hold all our search query values, e.g., { service_code: 'abc', client_name: 'xyz' }
   const [filters, setFilters] = useState({});
@@ -71,6 +71,7 @@ function MaintenanceRequestList({ token }) {
     'New': 'bg-primary',
     'Pending': 'bg-secondary',
     'In Progress': 'bg-warning text-dark',
+    'Follow-up required': 'bg-info',
     'Closed': 'bg-success',
   };
 
@@ -111,6 +112,11 @@ function MaintenanceRequestList({ token }) {
   useEffect(() => {
     fetchRecords(currentPage, selectedStatuses, filters, sortConfigs);
   }, [currentPage, selectedStatuses, filters, sortConfigs, fetchRecords]);
+
+  // Handler for creating follow-up
+  const handleCreateFollowUp = (recordId) => {
+    history.push('/maintenance/new', { cloneFromId: recordId });
+  };
 
   // Handler for when any search filter input changes
   const handleFilterChange = (field, value) => {
@@ -373,6 +379,15 @@ function MaintenanceRequestList({ token }) {
                         >
                           Edit
                         </button>
+                        {record.status === 'Follow-up required' && (
+                          <button
+                            className="btn btn-sm btn-info me-2"
+                            onClick={() => handleCreateFollowUp(record.maintenance_id)}
+                            title="Create a follow-up maintenance request"
+                          >
+                            Follow-Up
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}

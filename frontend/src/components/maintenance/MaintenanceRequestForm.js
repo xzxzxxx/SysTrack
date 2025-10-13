@@ -85,6 +85,78 @@ function MaintenanceRequestForm({ token }) {
       }
     })();
   }, [isEdit, id]);
+
+  // Load for clone (when creating a follow-up)
+  useEffect(() => {
+    if (isEdit) return; // only for new records
+    
+    const cloneFromId = history.location.state?.cloneFromId;
+    if (!cloneFromId) return;
+
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await api.get(`/maintenance-records/${cloneFromId}`);
+        const r = res.data;
+        
+        // Pre-fill form with PRESERVED fields (client & problem info)
+        setForm((prev) => ({
+          ...prev,
+          // Preserve: client and problem info
+          client_id: r.client_id || null,
+          client_name: r.client_name || '',
+          service_code: r.service_code || '',
+          jobnote: r.jobnote || '',
+          location_district: r.location_district || '',
+          is_warranty: r.is_warranty || false,
+          sales: r.sales_text || r.sales || '',
+          product_model: r.product_model || '',
+          serial_no: r.serial_no || '',
+          problem_description: r.problem_description || '',
+          alias: r.alias ? `Follow-up of #${cloneFromId}` : `Follow-up of #${cloneFromId}`,
+          
+          // Clear: visit-specific fields
+          service_date: '',
+          arrive_time: '',
+          depart_time: '',
+          completion_date: '',
+          solution_details: '',
+          labor_details: '',
+          parts_details: '',
+          remark: '',
+          
+          // Reset status to New
+          status: 'New',
+          
+          // Optionally preserve PICs (if same AE continues)
+          pic_ids_input: Array.isArray(r.pics) ? r.pics.map((p) => p.user_id).join(',') : '',
+        }));
+        
+        // Set PICs dropdown
+        const picsOptions = Array.isArray(r.pics) 
+          ? r.pics.map(p => ({ value: p.user_id, label: p.username })) 
+          : [];
+        setSelectedPics(picsOptions);
+        
+        // Show toast notification
+        setToast({
+          show: true,
+          type: 'info',
+          message: `Creating follow-up for Maintenance Request #${cloneFromId}`
+        });
+        
+      } catch (err) {
+        setToast({
+          show: true,
+          type: 'danger',
+          message: err.response?.data?.error || 'Failed to load record for cloning'
+        });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [isEdit, history.location.state]);
+
   
   // Clients: query /clients with name_search, minimum 2 chars
   const loadClientOptions = async (inputValue) => {
