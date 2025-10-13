@@ -32,6 +32,14 @@ const initialState = {
   status: 'New',
 };
 
+const STATUS_OPTIONS = [
+  { value: 'New', label: 'New' },
+  { value: 'Pending', label: 'Pending' },
+  { value: 'In Progress', label: 'In Progress' },
+  { value: 'Follow-up required', label: 'Follow-up required' },
+  { value: 'Closed', label: 'Closed' },
+];
+
 // This form handles creating and editing maintenance records.
 function MaintenanceRequestForm({ token }) {
   const { id } = useParams();
@@ -633,13 +641,12 @@ function MaintenanceRequestForm({ token }) {
                 <select
                   className="form-control"
                   name="status"
-                  value={form.status}
+                  value={form.status || 'New'}
                   onChange={handleChange}
                 >
-                  <option>New</option>
-                  <option>Pending</option>
-                  <option>In Progress</option>
-                  <option>Closed</option>
+                  {STATUS_OPTIONS.map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
                 </select>
               </div>
               <div className="col-md-6 mb-3" />
