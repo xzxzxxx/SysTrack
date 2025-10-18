@@ -246,7 +246,7 @@ function MaintenanceRequestList({ token }) {
   // Placeholder for the table rendering (we will build this out next)
   return (
     <div className="container-fluid mt-4">
-      <h2 className="mb-4">Maintenance Requests DEVELOPPING!!!!</h2>
+      <h2 className="mb-4">Maintenance Requests</h2>
       <div className="row">
         {/* Left Sidebar for Filters */}
         <div className="col-md-2 col-12 mb-3">
