@@ -527,3 +527,10 @@ CREATE INDEX idx_maintenance_records_client_id ON public.maintenance_records (cl
 CREATE INDEX idx_maintenance_records_user_id ON public.maintenance_records (user_id);
 CREATE INDEX idx_maintenance_records_ae ON public.maintenance_records ("AE");CREATE INDEX idx_maintenance_records_status ON public.maintenance_records (maintenance_status);
 
+
+
+--
+
+ALTER TABLE contracts
+  ADD COLUMN devices TEXT,
+  ADD COLUMN additional_info TEXT;

@@ -67,9 +67,11 @@ function ContractList({ token }) {
     { key: 'username', label: 'User' },
     { key: 'created_at', label: 'Created At' },
     { key: 'project_name', label: 'Project Name' },
+    { key: 'devices', label: 'Devices' },
+    { key: 'additional_info', label: 'Additional Info' },
   ];
 
-  const { visibleColumns, toggleColumn, resetColumns, order, reorderColumns } = useColumnFilter(columns, 'contract_columns_v2');
+  const { visibleColumns, toggleColumn, resetColumns, order, reorderColumns } = useColumnFilter(columns, 'contract_columns_v3');
 
   const statusColors = {
     'Active': 'bg-success',

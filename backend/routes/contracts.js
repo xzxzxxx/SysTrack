@@ -385,7 +385,9 @@ router.post('/', async (req, res) => {
     response_time,
     service_time,
     spare_part_provider,
-    project_id
+    project_id,
+    devices,
+    additional_info
   } = req.body;
 
   if (!client_id || !user_id || !start_date || !end_date || !category || !jobnote) {
@@ -429,7 +431,7 @@ router.post('/', async (req, res) => {
         alias, jobnote, sales, contract_name, location, category,
         t1, t2, t3, preventive, report, other, remarks,
         period, response_time, service_time, spare_part_provider, project_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
       RETURNING *`,
       [
         client_id,
@@ -455,7 +457,9 @@ router.post('/', async (req, res) => {
         response_time || null,
         service_time || null,
         spare_part_provider || null,
-        project_id || null
+        project_id || null,
+        devices || null,
+        additional_info || null
       ]
     );
     // Add contract_status dynamically
@@ -501,7 +505,9 @@ router.put('/:contract_id', async (req, res) => {
     response_time,
     service_time,
     spare_part_provider,
-    project_id
+    project_id,
+    devices,
+    additional_info
   } = req.body;
 
   if (!client_id || !user_id || !start_date || !end_date || !category || !jobnote) {
@@ -534,8 +540,8 @@ router.put('/:contract_id', async (req, res) => {
         location = $9, category = $10, t1 = $11, t2 = $12, t3 = $13,
         preventive = $14, report = $15, other = $16,
         remarks = $17, period = $18, response_time = $19, service_time = $20,
-        spare_part_provider = $21, project_id = $22
-      WHERE contract_id = $23 RETURNING *`,
+        spare_part_provider = $21, project_id = $22, devices = $23, additional_info = $24
+      WHERE contract_id = $25 RETURNING *`,
       [
         client_id,
         user_id,
@@ -559,6 +565,8 @@ router.put('/:contract_id', async (req, res) => {
         service_time || null,
         spare_part_provider || null,
         project_id || null,
+        devices || null,
+        additional_info || null,
         contract_id
       ]
     );

@@ -30,7 +30,9 @@ const initialContractState = {
   response_time: '',
   service_time: '',
   spare_part_provider: '',
-  project_id: null
+  project_id: null,
+  devices: '',
+  additional_info: ''  
 };
 
 // Component to create, renew, or edit contracts
@@ -196,7 +198,9 @@ function ContractForm({ token, defaultType = 'new' }) {
           spare_part_provider: contractData.spare_part_provider || '',
           project_id: contractData.project_id || null,
           client_name: contractData.client_name || '',
-          project_name: contractData.project_name || ''
+          project_name: contractData.project_name || '',
+          devices: contractData.devices || '',
+          additional_info: contractData.additional_info || '',
         });
         console.log('Contract state set to:', contractData); // Debug log
         setCustomInputs({
@@ -839,6 +843,31 @@ function ContractForm({ token, defaultType = 'new' }) {
                     placeholder="Location"
                     value={contract.location}
                     onChange={handleChange}
+                  />
+                </div>
+                {/* Devices */}
+                <div className="mb-3">
+                  <label className="form-label">Devices</label>
+                  <textarea
+                    className="form-control"
+                    name="devices"
+                    value={contract.devices}
+                    onChange={handleChange}
+                    rows="3"
+                    placeholder="List of devices covered by this contract"
+                  />
+                </div>
+
+                {/* Additional Info (placeholder) */}
+                <div className="mb-3">
+                  <label className="form-label">Additional Info</label>
+                  <textarea
+                    className="form-control"
+                    name="additional_info"
+                    value={contract.additional_info}
+                    onChange={handleChange}
+                    rows="3"
+                    placeholder="Additional information (rename this field later if needed)"
                   />
                 </div>
                 {renderRadioGroup('category', 'Category', ['SVR', 'DSS', 'EMB'])}
