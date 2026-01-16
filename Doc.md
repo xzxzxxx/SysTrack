@@ -376,7 +376,7 @@ Details are at README and user manuel
         - u may find account details in another files or ask for the access
     2. Setup/ restore code
         - cd /var/www/SysTrack
-        - git clone/ git pull
+        - git clone or git pull
     3. Transfer/ restore database
         - use pgadmin4 backup database in plain text
         - scp 'C:\Users\<your-username>\Downloads\backup' user@192.168.0.153:/var/www/SysTrack

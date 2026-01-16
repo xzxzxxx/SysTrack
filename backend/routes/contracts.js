@@ -430,7 +430,7 @@ router.post('/', async (req, res) => {
         client_id, user_id, start_date, end_date, client_code, renew_code,
         alias, jobnote, sales, contract_name, location, category,
         t1, t2, t3, preventive, report, other, remarks,
-        period, response_time, service_time, spare_part_provider, project_id
+        period, response_time, service_time, spare_part_provider, project_id, devices, additional_info
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
       RETURNING *`,
       [
