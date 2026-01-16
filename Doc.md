@@ -101,11 +101,14 @@ data-management-app/
 │   │   ├── clients.js      # Client CRUD, search, and auto-generation
 │   │   ├── contracts.js    # Contract CRUD and search
 │   │   ├── users.js        # User management
-│   │   └── projects.js     # Project CRUD with pagination and search
+│   │   └── projects.js     # Project CRUD with pagination 
+│   │   └── notification.js # Notify users for expiring soon contracts
+│   │   └── maintenanceRecords.js  # Maintenance records CRUD 
+│   │
 │   ├── middleware/         # Authentication middleware
 │   │   └── auth.js         # JWT verification
 │   │   └── checkRole.js    # Role checking
-│    ├── config/
+│   ├── config/
 │   ├── scripts/            # Database schema and test data (e.g., schema.sql)
 │   ├── index.js            # Backend entry point
 │   ├── package.json
@@ -124,6 +127,7 @@ data-management-app/
 │   │   ├── utils/          # Helper functions (e.g., useColumnFilter.js, api.js)
 │   │   ├── App.js          # Main React app
 │   │   ├── index.js        # Frontend entry point
+│   │   ├── .env            # Frontend environment
 │   ├── package.json
 │   └── public/
 ├── docs/                   # Feature-specific guides (e.g., SysTrack-Documentation.md)
@@ -179,6 +183,7 @@ Details are at README and user manuel
     - Go to `/maintenance` to view, search, or manage records.
     - Filter by status and fields, sort by columns, and paginate results.
     - Create/edit via form with radio groups for categories.
+    - Follow up unfinished case by creaating new records.
 8. **Settings**:
     - Go to `/settings` for admin approvals
     - Password changes.
@@ -307,6 +312,9 @@ Details are at README and user manuel
         - Backend verifies old password with bcrypt
         - Hashes new password and updates database
         - Shows success/error feedback
+    - Expire Soon Controller (all users):
+        - Change number of month count as expiring soon (session only)
+        - Reset button to default 3 months
 
 7. Email Notification
     - Review Expiring Contracts: 
@@ -391,18 +399,14 @@ Details are at README and user manuel
 
 - **Immediate Tasks**:
     - Add better form validation and duplication checks
-    - Maintenance modules including frontend, validation.
     - Fix JWT verification issues: Currently, it attempts to refresh with expired tokens (rejected and logged in console). Implement a proper refresh token mechanism for secure, long-lived sessions (e.g., using separate access and refresh tokens stored securely).
-    - Allow users to adjust the settings of Expiring Soon contracts
-        - A quick solution is adjust the '3 months' to '6 months' at backend/routes/contracts.js
     - Prevent send too many email by nodemailer. Notify users which cases are sent. 
     - Auto backup Database
     - Stop users from create accounts with same email. no validation check accross pending and users table currently.
 - **Long-Term**:
     - Refactor for reusability: Components like pagination in contract page and search bar are not reused; create shared components in `common/` folder to avoid duplication across modules (e.g., a universal Pagination.js and SearchBar.js).
-    - Informative DashBoard (Active + Pending contracts per month, non-closed maintenace records)
+    - Separate maintenanceReocrds and maintenanceRequest table. One request can have multiple maintenance. It should be 1 to N relationship. Currently approvach are copying the same request to create a new maintenance record.
     - Implement role-based access (e.g., admin-only deletes)
-    - Export to .xlsx/ .csv function of maintenance Recrods
     - Security improvements (e.g., input sanitization, rate limiting)
     - Cloud deployment and automated backups
     - Linking with jobnote

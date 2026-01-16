@@ -98,6 +98,7 @@ Stores contract details, SLA information, and service agreements.
 | user_id | integer | - | FOREIGN KEY | Reference to users.user_id |
 | project_id | integer | - | FOREIGN KEY | Reference to projects.project_id |
 | created_at | timestamp | - | DEFAULT CURRENT_TIMESTAMP | Contract creation timestamp |
+| additional_info | text | - |  NULLABLE | Temp column for separating contract_name |
 
 **Foreign Keys:**
 - `client_id` REFERENCES clients(client_id) ON DELETE RESTRICT

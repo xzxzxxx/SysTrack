@@ -31,11 +31,10 @@ The application features automated code generation, advanced search and filterin
     - **Sliding Sessions**: Active users remain logged in indefinitely thanks to a seamless, automatic token refresh mechanism. Resolved verification bugs.
 - **Project Management**:
     - Paginated list of projects with search by name and links to related contracts.
-- **Maintenance Request Management** (In Development):
+- **Maintenance Request Management** :
     - Layout for listing and creating maintenance requests is finished, including search filters (e.g., by status, service code, client name), pagination, column customization with drag-and-drop, and sorting.
     - Form supports async searchable dropdowns and radio button groups for fields like service type and warranty status.
-    - The function is still developing; core backend integration and full CRUD operations are in progress. Database and layout are finished.
-- **Additional Tools**:
+- **Additional Tools**:a
     - Reusable SearchBar component for real-time feedback.
 
 ## Tech Stack
@@ -77,7 +76,7 @@ Follow these steps to set up and run the project on a local machine for developm
         CREATE USER systrack_user WITH ENCRYPTED PASSWORD 'your_secure_password';
         GRANT ALL PRIVILEGES ON DATABASE systrack_dev TO systrack_user;
         ```
-    -   Run your database schema script (`db-setup.sql` or similar) to create the necessary tables.
+    -   U may follow the scripts/excel_to_db_scripts.sql if u want to reset the database. It is not a full scripts but u can excute the commend one by one or follow it logic to create neccesary table
 
 4.  **Create the Backend Environment File (`.env`):**
     -   Create a file named `.env` in the `backend` directory.
@@ -138,7 +137,7 @@ Next, set up the React client.
 
 ## Running Tests
 
-Unit and integration tests for the backend are located in the `backend` directory and can be run using Jest.
+Some small unit and integration tests for the backend are located in the `backend` directory and can be run using Jest.
 
 1.  **Navigate to the backend directory:**
     ```
