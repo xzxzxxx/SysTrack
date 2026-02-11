@@ -27,7 +27,7 @@ function Login({ setToken }) {
       <div className="row w-100" style={{ maxWidth: 900 }}>
         <div className="col-md-6 d-none d-md-flex login-image justify-content-center align-items-center">
           {/* Optional: Add a logo or illustration here */}
-          <img src="/branding/logo.svg" alt="Brand" className="img-fluid"/>
+          {/*<img src="/branding/logo.svg" alt="Brand" className="img-fluid"/>*/}
         </div>
         <div className="col-md-6 col-12 d-flex align-items-center">
           <div className="w-100 p-4 login-card shadow-lg">
