@@ -14,7 +14,7 @@ const getExpiringMonths = (req) => {
 };
 
 // This helper function generates the HTML table for the email body
-const generateEmailHTML = (contracts) => {
+const generateEmailHTML = (contracts, months) => {
   // These columns match the ones you want in the email
   const columns = [
     { key: 'contract_id', label: 'Contract ID' },
@@ -63,17 +63,22 @@ const generateEmailHTML = (contracts) => {
         </tbody>
       </table>
       <p>Best regards,</p>
-      <p>XXX</p>
+      <p>SysTrack App</p>
     </div>
   `;
 };
 
 // POST /api/notifications/send-renewal-email
 router.post('/send-renewal-email', async (req, res) => {
-  const { contractIds } = req.body;
+  const { contractIds, to } = req.body;
 
-  if (!contractIds || contractIds.length === 0) {
+  if (!Array.isArray(contractIds) || contractIds.length === 0) {
     return res.status(400).json({ error: 'No contracts selected to notify.' });
+  }
+
+  const recipient = (to && String(to).trim());
+  if (!recipient) {
+    return res.status(400).json({ error: 'No recipient email provided.' });
   }
 
   try {
@@ -98,14 +103,14 @@ router.post('/send-renewal-email', async (req, res) => {
     const currentDate = new Date();
     const monthYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
     const months = getExpiringMonths(req);
-    const subjectLine = `Maintenance contract reminder (${months} months window)`;
+    const subjectLine = `Maintenance contract reminder (${monthYear})`;
 
     // 3. Send the email using the configured transporter
     await transporter.sendMail({
       from: `"SysTrack App" <${process.env.EMAIL_USER}>`,
-      to: process.env.RECIPIENT_EMAIL,
+      to: recipient,
       subject: subjectLine,
-      html: generateEmailHTML(contracts),
+      html: generateEmailHTML(contracts, months),
       });
 
     res.status(200).json({ message: 'Notification email sent successfully!' });

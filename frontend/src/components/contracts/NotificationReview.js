@@ -8,6 +8,7 @@ const NotificationReview = ({ token }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [emailTo, setEmailTo] = useState('');
 
   useEffect(() => {
     const fetchExpiringContracts = async () => {
@@ -53,16 +54,20 @@ const NotificationReview = ({ token }) => {
   }, [contracts, selectedIds]);
 
   const handleSendNotice = async () => {
+    if (!emailTo.trim()) {
+      alert('Please enter at least one recipient email.');
+      return;
+    }
+
     setIsSending(true);
     try {
       await api.post('/notifications/send-renewal-email', {
-        contractIds: Array.from(selectedIds)
+        contractIds: Array.from(selectedIds),
+        to: emailTo.trim()
       });
-      // Replace with your toast system
       alert('Notification sent successfully!');
     } catch (error) {
       console.error("Failed to send notification", error);
-      // Replace with your toast system
       alert(`Error: ${error.response?.data?.error || 'Could not send the email.'}`);
     } finally {
       setIsSending(false);
@@ -150,6 +155,8 @@ const NotificationReview = ({ token }) => {
         contracts={selectedContracts}
         onSend={handleSendNotice}
         isSending={isSending} // Pass the state down
+        toEmail={emailTo}
+        onToEmailChange={setEmailTo}
       />
     </div>
   );

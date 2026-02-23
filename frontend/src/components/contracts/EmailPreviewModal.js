@@ -1,6 +1,6 @@
 import React from 'react';
 
-const EmailPreviewModal = ({ show, onClose, contracts, onSend, isSending }) => {
+const EmailPreviewModal = ({ show, onClose, contracts, onSend, isSending, toEmail, onToEmailChange }) => {
   if (!show) {
     return null;
   }
@@ -8,7 +8,15 @@ const EmailPreviewModal = ({ show, onClose, contracts, onSend, isSending }) => {
   const monthYear = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' }); // e.g., "June 2025"
   const subjectLine = `Maintenance contract reminder (${monthYear})`;
 
-  // --- NEW: Define the columns for the email table as specified ---
+  // Read expiring months from sessionStorage
+  const readExpiringMonths = () => {
+    const raw = sessionStorage.getItem('expiringMonthsOverride');
+    const m = raw ? parseInt(raw, 10) : 3;
+    return Number.isFinite(m) && m > 0 ? m : 3;
+  };
+  const months = readExpiringMonths();
+
+  // Define the columns for the email table as specified
   const columns = [
     { key: 'contract_id', label: 'Contract ID' },
     { key: 'client_code', label: 'Client Code' },
@@ -35,11 +43,20 @@ const EmailPreviewModal = ({ show, onClose, contracts, onSend, isSending }) => {
             <button type="button" className="btn-close" onClick={onClose}></button>
           </div>
           <div className="modal-body">
-            <p><strong>To:</strong> jonathan.cwchk@outlook.com</p>
+            <div className="mb-2">
+              <label><strong>To:</strong></label>
+              <input
+                type="email"
+                className="form-control"
+                value={toEmail}
+                onChange={(e) => onToEmailChange(e.target.value)}
+                placeholder="Enter recipient email"
+              />
+            </div>
             <p><strong>Subject:</strong> {subjectLine}</p>
             <hr />
             <p>Dear Sales,</p>
-            <p>Here is a list of maintenance contracts which will expire in the coming 3 months. Thank you!</p>
+            <p>Here is a list of maintenance contracts which will expire in the coming {months} month(s). Thank you!</p>
 
             <div className="table-responsive">
               <table className="table table-bordered table-sm">
@@ -67,7 +84,7 @@ const EmailPreviewModal = ({ show, onClose, contracts, onSend, isSending }) => {
             </div>
             <div className="mt-4">
               <p>Best regards,</p>
-              <p>XXX</p>
+              <p>SysTrack App</p>
             </div>
 
           </div>
