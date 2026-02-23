@@ -95,7 +95,9 @@ Follow these steps to set up and run the project on a local machine for developm
     # Email Notification Credentials (using a Gmail App Password is recommended)
     EMAIL_USER=your-dedicated-app-email@gmail.com
     EMAIL_PASS=your-16-digit-gmail-app-password
-    RECIPIENT_EMAIL=email_address_to_receive_notifications@example.com
+    
+    # Removed. Current recipient email should be filled everytime.
+    # RECIPIENT_EMAIL=email_address_to_receive_notifications@example.com
     ```
 
 5.  **Start the Backend Server:**
