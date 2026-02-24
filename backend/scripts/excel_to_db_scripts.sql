@@ -534,3 +534,21 @@ CREATE INDEX idx_maintenance_records_ae ON public.maintenance_records ("AE");CRE
 ALTER TABLE contracts
   ADD COLUMN devices TEXT,
   ADD COLUMN additional_info TEXT;
+
+
+
+-- fixing 'ae' to 'AE'
+ALTER TABLE pending_registrations 
+DROP CONSTRAINT pending_registrations_role_check;
+
+UPDATE pending_registrations 
+set role = 'AE'
+WHERE role = 'ae';
+
+UPDATE users 
+set role = 'AE'
+WHERE role = 'ae';
+
+ALTER TABLE pending_registrations 
+ADD CONSTRAINT pending_registrations_role_check 
+CHECK (role IN ('admin', 'sales', 'AE'));

@@ -27,8 +27,8 @@ router.post('/register', async (req, res) => {
   if (!username || !email || !password || !role) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
-  if (!['admin', 'sales', 'ae'].includes(role)) {
-    return res.status(400).json({ error: 'Invalid role. Must be admin, sales, or ae' });
+  if (!['admin', 'sales', 'AE'].includes(role)) {
+    return res.status(400).json({ error: 'Invalid role. Must be admin, sales, or AE' });
   }
   /*
   if (role === 'admin') {

@@ -389,7 +389,7 @@ Details are at README and user manuel
             3. npm run build
 
         -Backend
-            1. cd../backend
+            1. cd ../backend
             2. pm2 restart systrack-api
 
         - Nginx
